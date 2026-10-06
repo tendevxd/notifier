@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Notifier</title>
+<style>
+  :root { --bg:#eceff4; --card:#fff; --ink:#15171d; --muted:#5d6475; --line:#d5d9e2;
+          --accent:#2b3dff; --on:#fff; --warn:#b36b00; --bad:#c4261d; --ok:#137a4b; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#12141a; --card:#1b1e26; --ink:#eef0f5; --muted:#99a0b3; --line:#2f3442;
+            --accent:#6b79ff; --on:#0d0f14; --warn:#f0b24a; --bad:#ff7b72; --ok:#4fd18f; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  main { max-width:520px; margin:0 auto; padding:max(16px,env(safe-area-inset-top)) 16px 96px; }
+  h1 { font-size:2rem; font-weight:800; letter-spacing:-.03em; margin:8px 0 0; }
+  .sub { color:var(--muted); margin:0 0 18px; font-size:.9rem; word-break:break-all; }
+  h2 { font-size:1.1rem; margin:0 0 4px; }
+  .hint { color:var(--muted); font-size:.9rem; margin:0 0 14px; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px; }
+  label { display:block; font-weight:600; font-size:.9rem; margin:0 0 6px; }
+  input[type=text], input[type=number], textarea {
+    width:100%; font:inherit; color:inherit; background:var(--bg);
+    border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+  textarea { min-height:90px; resize:vertical; }
+  .f { margin-bottom:14px; }
+  :focus-visible { outline:3px solid var(--accent); outline-offset:1px; }
+  button { font:inherit; cursor:pointer; }
+  .btn { width:100%; font-weight:800; font-size:1.05rem; background:var(--accent); color:var(--on);
+         border:0; border-radius:12px; padding:14px; }
+  .btn.ghost { background:transparent; color:var(--ink); border:1px solid var(--line); font-weight:600; }
+  .btn:active { transform:scale(.98); }
+  .row { display:flex; gap:8px; align-items:center; }
+  .row > * { flex:1; } .row > .x { flex:0 0 auto; }
+  .seg { display:flex; gap:8px; margin-bottom:14px; }
+  .seg button, .chip { background:transparent; color:var(--ink); border:1px solid var(--line);
+                       border-radius:999px; padding:6px 14px; }
+  .seg button { flex:1; }
+  .seg button[aria-pressed="true"] { background:var(--accent); color:var(--on); border-color:var(--accent); }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .check { display:flex; align-items:center; gap:10px; font-weight:400; font-size:1rem; }
+  .check input { width:22px; height:22px; accent-color:var(--accent); }
+  .msg { min-height:1.5em; margin:10px 2px 0; font-weight:600; }
+  .msg.bad { color:var(--bad); } .msg.ok { color:var(--ok); }
+  ul { list-style:none; margin:0; padding:0; }
+  .list li { background:var(--card); border:1px solid var(--line); border-left:5px solid var(--c);
+             border-radius:10px; padding:10px 14px; margin-bottom:10px; }
+  .list li p { margin:2px 0; } .list small { color:var(--muted); }
+  .info { --c:var(--accent); } .warn { --c:var(--warn); } .error { --c:var(--bad); }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .grid button { background:var(--card); color:var(--ink); border:1px solid var(--line);
+                 border-radius:14px; padding:26px 8px; font-weight:800; font-size:1.05rem; }
+  .grid button:active { background:var(--accent); color:var(--on); }
+  nav { position:fixed; left:0; right:0; bottom:0; display:flex; background:var(--card);
+        border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom); }
+  nav button { flex:1; background:none; border:0; color:var(--muted); padding:14px 0; font-size:.85rem; font-weight:600; }
+  nav button[aria-current="true"] { color:var(--accent); box-shadow:inset 0 3px 0 var(--accent); }
+  .empty { color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Notifier</h1>
+  <p class="sub">Open on your PC: <span id="ip">…</span></p>
+
+  <section class="view" id="inbox">
+    <div class="row" style="margin-bottom:12px">
+      <h2>Inbox</h2>
+      <button class="chip x" id="clear">Clear</button>
+    </div>
+    <ul class="list" id="list"></ul>
+    <p class="empty" id="empty">Nothing yet. Alerts from your scripts show up here.</p>
+  </section>
+
+  <section class="view" id="send" hidden>
+    <h2>Send</h2>
+    <p class="hint">Sends to this phone. Open this page on your PC to send from there.</p>
+    <div class="panel">
+      <div class="seg" id="types">
+        <button data-t="info" aria-pressed="true">Info</button>
+        <button data-t="warn" aria-pressed="false">Warning</button>
+        <button data-t="error" aria-pressed="false">Error</button>
+      </div>
+      <div class="f"><label for="title">Title</label><input id="title" type="text" value="Alert"></div>
+      <div class="f"><label for="text">Message</label><textarea id="text"></textarea></div>
+      <label class="check"><input id="speak" type="checkbox" checked> Read it aloud</label>
+    </div>
+    <button class="btn" id="sendBtn">Send</button>
+    <p class="msg" id="sendMsg"></p>
+    <p class="hint">Error alerts also play the alarm sound and blink the flashlight.</p>
+  </section>
+
+  <section class="view" id="remind" hidden>
+    <h2>Reminders</h2>
+    <p class="hint">The phone reminds you on a repeat, with no PC needed.</p>
+    <div class="panel">
+      <div class="chips" id="rpre"></div>
+      <label class="check f"><input id="rOn" type="checkbox"> Reminders on</label>
+      <div class="f"><label for="rMin">Every (minutes)</label><input id="rMin" type="number" min="1" value="60"></div>
+      <div class="f"><label for="rText">Message</label><input id="rText" type="text"></div>
+      <label class="check"><input id="rSpeak" type="checkbox"> Read it aloud</label>
+    </div>
+    <button class="btn" id="rSave">Save reminder</button>
+    <p class="msg" id="rMsg"></p>
+  </section>
+
+  <section class="view" id="remote" hidden>
+    <h2>Remote</h2>
+    <p class="hint">Each button sends a command to your PC.</p>
+    <div class="grid" id="cmds"></div>
+    <p class="empty" id="noCmds">No buttons yet. Add them in Setup.</p>
+    <p class="msg" id="cMsg"></p>
+  </section>
+
+  <section class="view" id="setup" hidden>
+    <h2>Setup</h2>
+    <div class="panel">
+      <div class="f"><label for="pc">PC address</label>
+        <input id="pc" type="text" placeholder="192.168.1.20:8001"></div>
+      <label>Remote buttons</label>
+      <div id="rows"></div>
+      <button class="btn ghost" id="addRow" style="margin-top:8px">Add button</button>
+    </div>
+    <button class="btn" id="setSave">Save setup</button>
+    <p class="msg" id="setMsg"></p>
+  </section>
+</main>
+
+<nav>
+  <button data-v="inbox" aria-current="true">Inbox</button>
+  <button data-v="send" aria-current="false">Send</button>
+  <button data-v="remind" aria-current="false">Remind</button>
+  <button data-v="remote" aria-current="false">Remote</button>
+  <button data-v="setup" aria-current="false">Setup</button>
+</nav>
+
+<script>
+const $ = s => document.querySelector(s);
+const api = (u, o) => fetch(u, o ? { method: "POST", body: new URLSearchParams(o) } : {}).then(r => r.json());
+const say = (el, t, bad) => { $(el).textContent = t; $(el).className = "msg " + (bad ? "bad" : "ok"); };
+let S = null, cmds = [], type = "info";
+
+function view(v) {
+  document.querySelectorAll(".view").forEach(e => e.hidden = e.id !== v);
+  document.querySelectorAll("nav button").forEach(b => b.setAttribute("aria-current", b.dataset.v === v));
+}
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => view(b.dataset.v));
+
+function renderInbox() {
+  const ul = $("#list"); ul.replaceChildren();
+  $("#empty").hidden = S.history.length > 0;
+  S.history.forEach(h => {
+    const li = document.createElement("li"); li.className = h.type;
+    const b = document.createElement("b"); b.textContent = h.title;
+    const p = document.createElement("p"); p.textContent = h.text;
+    const t = document.createElement("small");
+    t.textContent = new Date(h.t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    li.append(b, p, t); ul.append(li);
+  });
+}
+
+function renderRemote() {
+  const g = $("#cmds"); g.replaceChildren();
+  $("#noCmds").hidden = cmds.length > 0;
+  cmds.forEach(c => {
+    const b = document.createElement("button"); b.textContent = c.label || c.cmd;
+    b.onclick = async () => { const r = await api("/api/command", { cmd: c.cmd }); say("#cMsg", r.msg, r.msg !== "Sent."); };
+    g.append(b);
+  });
+}
+
+function renderRows() {
+  const box = $("#rows"); box.replaceChildren();
+  cmds.forEach((c, i) => {
+    const row = document.createElement("div"); row.className = "row f";
+    const a = document.createElement("input"); a.type = "text"; a.placeholder = "Button name"; a.value = c.label;
+    a.oninput = () => c.label = a.value;
+    const b = document.createElement("input"); b.type = "text"; b.placeholder = "Command"; b.value = c.cmd;
+    b.oninput = () => c.cmd = b.value;
+    const x = document.createElement("button"); x.className = "chip x"; x.textContent = "Remove";
+    x.onclick = () => { cmds.splice(i, 1); renderRows(); };
+    row.append(a, b, x); box.append(row);
+  });
+}
+
+async function load(first) {
+  S = await api("/api/state");
+  $("#ip").textContent = "http://" + S.ip + ":5000";
+  renderInbox();
+  if (first) {
+    $("#rOn").checked = S.reminder.on; $("#rMin").value = S.reminder.minutes;
+    $("#rText").value = S.reminder.text; $("#rSpeak").checked = S.reminder.speak;
+    $("#pc").value = S.pc; cmds = S.commands; renderRows(); renderRemote();
+  }
+}
+
+document.querySelectorAll("#types button").forEach(b => b.onclick = () => {
+  type = b.dataset.t;
+  document.querySelectorAll("#types button").forEach(x => x.setAttribute("aria-pressed", x === b));
+});
+$("#sendBtn").onclick = async () => {
+  const text = $("#text").value.trim();
+  if (!text) return say("#sendMsg", "Type a message first.", 1);
+  await api("/notify", { title: $("#title").value.trim() || "Alert", text, type, speak: $("#speak").checked ? "1" : "0" });
+  say("#sendMsg", "Sent."); $("#text").value = ""; load();
+};
+$("#clear").onclick = async () => { await api("/api/clear", {}); load(); };
+
+[["Stretch and water", 60, "Stretch and drink some water."], ["Rest your eyes", 20, "Look away from the screen for a minute."]]
+  .forEach(([l, m, t]) => {
+    const b = document.createElement("button"); b.className = "chip"; b.textContent = l;
+    b.onclick = () => { $("#rMin").value = m; $("#rText").value = t; };
+    $("#rpre").append(b);
+  });
+$("#rSave").onclick = async () => {
+  await api("/api/reminder", { on: $("#rOn").checked ? "1" : "0", minutes: $("#rMin").value || "60",
+    text: $("#rText").value, speak: $("#rSpeak").checked ? "1" : "0" });
+  say("#rMsg", $("#rOn").checked ? "Saved. Reminders are on." : "Saved. Reminders are off.");
+};
+
+$("#addRow").onclick = () => { cmds.push({ label: "", cmd: "" }); renderRows(); };
+$("#setSave").onclick = async () => {
+  cmds = cmds.filter(c => c.cmd.trim());
+  await api("/api/settings", { pc: $("#pc").value, commands: JSON.stringify(cmds) });
+  renderRows(); renderRemote(); say("#setMsg", "Saved.");
+};
+
+load(true);
+setInterval(() => { if (!$("#inbox").hidden) load(false); }, 3000);
+</script>
+</body>
+</html>
