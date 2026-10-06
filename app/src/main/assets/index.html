@@ -3,130 +3,118 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Notifier</title>
+<meta name="color-scheme" content="dark">
+<title>Prompt desk</title>
 <style>
-  :root { --bg:#eceff4; --card:#fff; --ink:#15171d; --muted:#5d6475; --line:#d5d9e2;
-          --accent:#2b3dff; --on:#fff; --warn:#b36b00; --bad:#c4261d; --ok:#137a4b; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#12141a; --card:#1b1e26; --ink:#eef0f5; --muted:#99a0b3; --line:#2f3442;
-            --accent:#6b79ff; --on:#0d0f14; --warn:#f0b24a; --bad:#ff7b72; --ok:#4fd18f; } }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink);
-         font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
-  main { max-width:520px; margin:0 auto; padding:max(16px,env(safe-area-inset-top)) 16px 96px; }
-  h1 { font-size:2rem; font-weight:800; letter-spacing:-.03em; margin:8px 0 0; }
-  .sub { color:var(--muted); margin:0 0 18px; font-size:.9rem; word-break:break-all; }
-  h2 { font-size:1.1rem; margin:0 0 4px; }
-  .hint { color:var(--muted); font-size:.9rem; margin:0 0 14px; }
-  .panel { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px; }
-  label { display:block; font-weight:600; font-size:.9rem; margin:0 0 6px; }
-  input[type=text], input[type=number], textarea {
-    width:100%; font:inherit; color:inherit; background:var(--bg);
-    border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
-  textarea { min-height:90px; resize:vertical; }
+  :root { --bg:#000; --s1:#0b0b0f; --s2:#16161d; --line:#24242e; --ink:#f4f4f7; --mute:#8b8b9b;
+          --acc:#a99bff; --go:#2ee59d; --warn:#ffb347; --bad:#ff5d6c; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  main { max-width:520px; margin:0 auto; padding:max(18px,env(safe-area-inset-top)) 18px 110px; }
+  header { display:flex; justify-content:space-between; align-items:flex-end; margin:6px 0 22px; }
+  h1 { font-size:2.2rem; font-weight:800; letter-spacing:-.04em; line-height:1; margin:0; }
+  .who { color:var(--mute); font-size:.85rem; margin:6px 0 0; word-break:break-all; }
+  .live { display:flex; align-items:center; gap:8px; color:var(--mute); font-size:.8rem; }
+  .live i { width:9px; height:9px; border-radius:50%; background:var(--bad); }
+  .live.on i { background:var(--go); box-shadow:0 0 10px var(--go); }
+  h2 { font-size:1.15rem; margin:0 0 4px; letter-spacing:-.01em; }
+  .hint { color:var(--mute); font-size:.9rem; margin:0 0 14px; }
+  .panel { background:var(--s1); border:1px solid var(--line); border-radius:18px; padding:16px; margin-bottom:14px; }
+  label { display:block; font-weight:600; font-size:.88rem; margin:0 0 6px; }
+  input[type=text], input[type=number], input[type=time], input[type=date], textarea {
+    width:100%; font:inherit; color:var(--ink); background:var(--s2); color-scheme:dark;
+    border:1px solid var(--line); border-radius:12px; padding:10px 12px; }
+  textarea { min-height:84px; resize:vertical; }
+  :focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
   .f { margin-bottom:14px; }
-  :focus-visible { outline:3px solid var(--accent); outline-offset:1px; }
-  button { font:inherit; cursor:pointer; }
-  .btn { width:100%; font-weight:800; font-size:1.05rem; background:var(--accent); color:var(--on);
-         border:0; border-radius:12px; padding:14px; }
+  button { font:inherit; cursor:pointer; color:var(--ink); }
+  .btn { width:100%; font-weight:700; background:var(--ink); color:#000; border:0; border-radius:14px; padding:14px; }
   .btn.ghost { background:transparent; color:var(--ink); border:1px solid var(--line); font-weight:600; }
   .btn:active { transform:scale(.98); }
   .row { display:flex; gap:8px; align-items:center; }
-  .row > * { flex:1; } .row > .x { flex:0 0 auto; }
-  .seg { display:flex; gap:8px; margin-bottom:14px; }
-  .seg button, .chip { background:transparent; color:var(--ink); border:1px solid var(--line);
-                       border-radius:999px; padding:6px 14px; }
-  .seg button { flex:1; }
-  .seg button[aria-pressed="true"] { background:var(--accent); color:var(--on); border-color:var(--accent); }
-  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .row > * { flex:1; min-width:0; } .row > .x { flex:0 0 auto; }
+  .row.wrap { flex-wrap:wrap; } .row.wrap > :first-child { flex-basis:100%; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .chip, .seg button { background:transparent; border:1px solid var(--line); border-radius:999px; padding:6px 14px; font-size:.9rem; }
+  .seg { display:flex; gap:8px; margin-bottom:14px; } .seg button { flex:1; }
+  .seg button[aria-pressed="true"] { background:var(--acc); color:#000; border-color:var(--acc); font-weight:700; }
   .check { display:flex; align-items:center; gap:10px; font-weight:400; font-size:1rem; }
-  .check input { width:22px; height:22px; accent-color:var(--accent); }
+  .check input { width:22px; height:22px; accent-color:var(--acc); }
   .msg { min-height:1.5em; margin:10px 2px 0; font-weight:600; }
-  .msg.bad { color:var(--bad); } .msg.ok { color:var(--ok); }
+  .msg.bad { color:var(--bad); } .msg.ok { color:var(--go); }
   ul { list-style:none; margin:0; padding:0; }
-  .list li { background:var(--card); border:1px solid var(--line); border-left:5px solid var(--c);
-             border-radius:10px; padding:10px 14px; margin-bottom:10px; }
-  .list li p { margin:2px 0; } .list small { color:var(--muted); }
-  .info { --c:var(--accent); } .warn { --c:var(--warn); } .error { --c:var(--bad); }
+  .list li { background:var(--s1); border:1px solid var(--line); border-left:4px solid var(--c);
+             border-radius:12px; padding:10px 14px; margin-bottom:10px; }
+  .list li p { margin:2px 0; } .list small { color:var(--mute); }
+  .info { --c:var(--acc); } .warn { --c:var(--warn); } .error { --c:var(--bad); }
+  .empty { color:var(--mute); }
+  details { margin-bottom:14px; } summary { cursor:pointer; font-weight:600; padding:12px 0; }
+  .stby { color:var(--warn); font-size:.9rem; margin:0; }
+  #cueNext { font-size:1.7rem; letter-spacing:-.02em; margin:2px 0 14px; }
+  .go { display:block; width:100%; height:120px; border:0; border-radius:26px; background:var(--go); color:#00130b;
+        font-weight:800; font-size:3.2rem; letter-spacing:.06em; box-shadow:0 0 44px #2ee59d40; margin-bottom:10px; }
+  .go:active { transform:scale(.985); box-shadow:0 0 80px #2ee59dA0; }
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .grid button { background:var(--card); color:var(--ink); border:1px solid var(--line);
-                 border-radius:14px; padding:26px 8px; font-weight:800; font-size:1.05rem; }
-  .grid button:active { background:var(--accent); color:var(--on); }
-  nav { position:fixed; left:0; right:0; bottom:0; display:flex; background:var(--card);
-        border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom); }
-  nav button { flex:1; background:none; border:0; color:var(--muted); padding:14px 0; font-size:.85rem; font-weight:600; }
-  nav button[aria-current="true"] { color:var(--accent); box-shadow:inset 0 3px 0 var(--accent); }
-  .empty { color:var(--muted); }
-  .sl { width:100%; margin:6px 0 14px; accent-color:var(--accent); }
-  .pad { position:relative; height:200px; background:var(--bg); border:1px solid var(--line); border-radius:14px; touch-action:none; margin-top:6px; }
-  .dot { position:absolute; width:22px; height:22px; margin:-11px; border-radius:50%; background:var(--accent); left:50%; top:50%; }
+  .grid button { background:var(--s2); border:1px solid var(--line); border-radius:16px; padding:22px 8px; font-weight:700; }
+  .grid button:active { background:var(--acc); color:#000; }
+  .sl { width:100%; margin:4px 0 14px; accent-color:var(--acc); }
+  .pad { position:relative; height:210px; border:1px solid var(--line); border-radius:16px; touch-action:none; background:
+         linear-gradient(var(--line) 1px, transparent 1px) 0 0/25% 25%, linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0/25% 25%, var(--s2); }
+  .dot { position:absolute; width:26px; height:26px; margin:-13px; border-radius:50%; background:var(--acc); left:50%; top:50%; box-shadow:0 0 18px var(--acc); }
+  .dl { display:flex; align-items:baseline; gap:12px; padding:10px 0; border-top:1px solid var(--line); }
+  .dl:first-child { border-top:0; } .dl b { font-size:2rem; letter-spacing:-.04em; min-width:3.2rem; }
+  nav { position:fixed; left:0; right:0; bottom:0; display:flex; background:#050507ee; border-top:1px solid var(--line);
+        padding-bottom:env(safe-area-inset-bottom); backdrop-filter:blur(12px); }
+  nav button { flex:1; background:none; border:0; color:var(--mute); padding:15px 0; font-size:.85rem; font-weight:600; }
+  nav button[aria-current="true"] { color:var(--ink); box-shadow:inset 0 2px 0 var(--acc); }
 </style>
 </head>
 <body>
 <main>
-  <h1>Notifier</h1>
-  <p class="sub">Open on your PC: <span id="ip">…</span></p>
+  <header>
+    <div>
+      <h1>Prompt desk</h1>
+      <p class="who">Ten · on your PC: <span id="ip">…</span></p>
+    </div>
+    <div class="live" id="live"><i></i>Phone</div>
+  </header>
 
   <section class="view" id="inbox">
-    <div class="row" style="margin-bottom:12px">
-      <h2>Inbox</h2>
-      <button class="chip x" id="clear">Clear</button>
-    </div>
     <div id="asks"></div>
+    <div class="row f"><h2>Inbox</h2><button class="chip x" id="clear">Clear</button></div>
     <ul class="list" id="list"></ul>
-    <p class="empty" id="empty">Nothing yet. Alerts from your scripts show up here.</p>
-  </section>
-
-  <section class="view" id="send" hidden>
-    <h2>Send</h2>
-    <p class="hint">Sends to this phone. Open this page on your PC to send from there.</p>
-    <div class="panel">
-      <div class="seg" id="types">
-        <button data-t="info" aria-pressed="true">Info</button>
-        <button data-t="warn" aria-pressed="false">Warning</button>
-        <button data-t="error" aria-pressed="false">Error</button>
+    <p class="empty" id="empty">Nothing yet. Alerts from your scripts land here.</p>
+    <details>
+      <summary>Send an alert to this phone</summary>
+      <div class="panel">
+        <div class="seg" id="types">
+          <button data-t="info" aria-pressed="true">Info</button>
+          <button data-t="warn" aria-pressed="false">Warning</button>
+          <button data-t="error" aria-pressed="false">Error</button>
+        </div>
+        <div class="f"><label for="title">Title</label><input id="title" type="text" value="Alert"></div>
+        <div class="f"><label for="text">Message</label><textarea id="text"></textarea></div>
+        <label class="check f"><input id="speak" type="checkbox" checked> Read it aloud</label>
+        <button class="btn" id="sendBtn">Send</button>
+        <p class="msg" id="sendMsg"></p>
       </div>
-      <div class="f"><label for="title">Title</label><input id="title" type="text" value="Alert"></div>
-      <div class="f"><label for="text">Message</label><textarea id="text"></textarea></div>
-      <label class="check"><input id="speak" type="checkbox" checked> Read it aloud</label>
-    </div>
-    <button class="btn" id="sendBtn">Send</button>
-    <p class="msg" id="sendMsg"></p>
-    <p class="hint">Error alerts also play the alarm sound and blink the flashlight.</p>
+    </details>
   </section>
 
-  <section class="view" id="remind" hidden>
-    <h2>Reminders</h2>
-    <p class="hint">The phone reminds you on a repeat, with no PC needed.</p>
+  <section class="view" id="stage" hidden>
     <div class="panel">
-      <div class="chips" id="rpre"></div>
-      <label class="check f"><input id="rOn" type="checkbox"> Reminders on</label>
-      <div class="f"><label for="rMin">Every (minutes)</label><input id="rMin" type="number" min="1" value="60"></div>
-      <div class="f"><label for="rText">Message</label><input id="rText" type="text"></div>
-      <label class="check"><input id="rSpeak" type="checkbox"> Read it aloud</label>
+      <p class="stby">Standing by</p>
+      <h2 id="cueNext"></h2>
+      <button class="go" id="go">GO</button>
+      <div class="row"><button class="btn ghost" id="cueBack">Back</button><button class="btn ghost" id="cueReset">Reset</button></div>
+      <p class="hint" style="margin-top:12px">GO fires your buttons in order. Edit them in Setup.</p>
     </div>
-    <button class="btn" id="rSave">Save reminder</button>
-    <p class="msg" id="rMsg"></p>
-  </section>
-
-  <section class="view" id="remote" hidden>
-    <h2>Remote</h2>
-    <p class="hint">Each button sends a command to your PC.</p>
     <div class="grid" id="cmds"></div>
     <p class="empty" id="noCmds">No buttons yet. Add them in Setup.</p>
     <p class="msg" id="cMsg"></p>
-    <div class="panel" style="margin-top:14px">
-      <h2>Cues</h2>
-      <p class="hint">Fires your buttons one after another, in order.</p>
-      <p><b id="cueNext"></b></p>
-      <button class="btn" id="go">GO</button>
-      <div class="row" style="margin-top:8px">
-        <button class="btn ghost" id="cueBack">Back</button>
-        <button class="btn ghost" id="cueReset">Reset</button>
-      </div>
-    </div>
     <div class="panel">
       <h2>Controls</h2>
+      <p class="hint">Live values for your PC.</p>
       <label>Slider 1</label><input class="sl" data-n="slider1" type="range" min="0" max="1" step="0.01">
       <label>Slider 2</label><input class="sl" data-n="slider2" type="range" min="0" max="1" step="0.01">
       <label>Slider 3</label><input class="sl" data-n="slider3" type="range" min="0" max="1" step="0.01">
@@ -135,14 +123,40 @@
     </div>
   </section>
 
+  <section class="view" id="focus" hidden>
+    <h2>Focus</h2>
+    <p class="hint">Start a timer and put the phone down. It speaks when time is up.</p>
+    <div class="grid f" id="fpre"></div>
+    <div class="panel">
+      <div class="f"><label for="fText">Timer for</label><input id="fText" type="text" placeholder="Series script"></div>
+      <div class="row"><input id="fMin" type="number" min="1" value="30"><button class="btn" id="fGo">Start timer</button></div>
+    </div>
+    <p class="msg" id="fMsg"></p>
+  </section>
+
+  <section class="view" id="plan" hidden>
+    <h2>Deadlines</h2>
+    <div class="panel"><div id="dlCards"></div><div id="dlRows"></div>
+      <button class="btn ghost" id="addDl">Add deadline</button></div>
+    <h2>Reminders</h2>
+    <p class="hint">Leave "Every" at 0 to repeat daily at a set time.</p>
+    <div class="panel">
+      <div class="chips" id="rpre"></div>
+      <div id="remRows"></div>
+      <button class="btn ghost" id="addRem">Add reminder</button>
+    </div>
+    <button class="btn" id="planSave">Save plan</button>
+    <p class="msg" id="planMsg"></p>
+  </section>
+
   <section class="view" id="setup" hidden>
     <h2>Setup</h2>
     <div class="panel">
       <div class="f"><label for="pc">PC address</label>
-        <input id="pc" type="text" placeholder="192.168.1.20:8001"></div>
-      <label>Remote buttons</label>
+        <input id="pc" type="text" placeholder="Leave empty to find it automatically"></div>
+      <label>Stage buttons</label>
       <div id="rows"></div>
-      <button class="btn ghost" id="addRow" style="margin-top:8px">Add button</button>
+      <button class="btn ghost" id="addRow">Add button</button>
     </div>
     <button class="btn" id="setSave">Save setup</button>
     <p class="msg" id="setMsg"></p>
@@ -151,70 +165,100 @@
 
 <nav>
   <button data-v="inbox" aria-current="true">Inbox</button>
-  <button data-v="send" aria-current="false">Send</button>
-  <button data-v="remind" aria-current="false">Remind</button>
-  <button data-v="remote" aria-current="false">Remote</button>
+  <button data-v="stage" aria-current="false">Stage</button>
+  <button data-v="focus" aria-current="false">Focus</button>
+  <button data-v="plan" aria-current="false">Plan</button>
   <button data-v="setup" aria-current="false">Setup</button>
 </nav>
 
 <script>
 const $ = s => document.querySelector(s);
+const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x) e.textContent = x; return e; };
 const api = (u, o) => fetch(u, o ? { method: "POST", body: new URLSearchParams(o) } : {}).then(r => r.json());
-const say = (el, t, bad) => { $(el).textContent = t; $(el).className = "msg " + (bad ? "bad" : "ok"); };
-let S = null, cmds = [], type = "info";
+const say = (id, t, bad) => { const e = $(id); e.textContent = t; e.className = "msg " + (bad ? "bad" : "ok"); };
+let S = null, cmds = [], rems = [], dls = [], type = "info", cue = 0;
 
 function view(v) {
   document.querySelectorAll(".view").forEach(e => e.hidden = e.id !== v);
   document.querySelectorAll("nav button").forEach(b => b.setAttribute("aria-current", b.dataset.v === v));
+  window.scrollTo(0, 0);
 }
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => view(b.dataset.v));
+
+function editor(box, arr, fields, wrap) {
+  box.replaceChildren();
+  arr.forEach((it, i) => {
+    const row = el("div", "row f" + (wrap ? " wrap" : ""));
+    fields.forEach(([k, ph, t]) => {
+      const inp = el("input"); inp.type = t || "text"; inp.placeholder = ph; inp.value = it[k] ?? "";
+      inp.oninput = () => it[k] = t === "number" ? Number(inp.value) : inp.value;
+      row.append(inp);
+    });
+    const x = el("button", "chip x", "Remove");
+    x.onclick = () => { arr.splice(i, 1); editor(box, arr, fields, wrap); renderDls(); };
+    row.append(x); box.append(row);
+  });
+}
+const CF = [["label", "Button name"], ["cmd", "Command"]];
+const RF = [["text", "What should it say?"], ["every", "Every (min)", "number"], ["at", "Daily at", "time"]];
+const DF = [["name", "Deadline"], ["date", "", "date"]];
 
 function renderInbox() {
   const ul = $("#list"); ul.replaceChildren();
   $("#empty").hidden = S.history.length > 0;
   S.history.forEach(h => {
-    const li = document.createElement("li"); li.className = h.type;
-    const b = document.createElement("b"); b.textContent = h.title;
-    const p = document.createElement("p"); p.textContent = h.text;
-    const t = document.createElement("small");
-    t.textContent = new Date(h.t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    li.append(b, p, t); ul.append(li);
+    const li = el("li", h.type);
+    li.append(el("b", "", h.title), el("p", "", h.text),
+      el("small", "", new Date(h.t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })));
+    ul.append(li);
   });
 }
-
+function renderAsks() {
+  const box = $("#asks"); box.replaceChildren();
+  S.asks.forEach(a => {
+    const p = el("div", "panel"), row = el("div", "row");
+    a.options.forEach(o => {
+      const b = el("button", "btn", o);
+      b.onclick = async () => { await api("/api/answer", { id: a.id, answer: o }); load(false); };
+      row.append(b);
+    });
+    p.append(el("b", "", a.title), el("p", "", a.text), row); box.append(p);
+  });
+}
 function renderRemote() {
   const g = $("#cmds"); g.replaceChildren();
-  $("#noCmds").hidden = cmds.length > 0;
-  renderCue();
+  $("#noCmds").hidden = cmds.length > 0; renderCue();
   cmds.forEach(c => {
-    const b = document.createElement("button"); b.textContent = c.label || c.cmd;
+    const b = el("button", "", c.label || c.cmd);
     b.onclick = async () => { const r = await api("/api/command", { cmd: c.cmd }); say("#cMsg", r.msg, r.msg !== "Sent."); };
     g.append(b);
   });
 }
-
-function renderRows() {
-  const box = $("#rows"); box.replaceChildren();
-  cmds.forEach((c, i) => {
-    const row = document.createElement("div"); row.className = "row f";
-    const a = document.createElement("input"); a.type = "text"; a.placeholder = "Button name"; a.value = c.label;
-    a.oninput = () => c.label = a.value;
-    const b = document.createElement("input"); b.type = "text"; b.placeholder = "Command"; b.value = c.cmd;
-    b.oninput = () => c.cmd = b.value;
-    const x = document.createElement("button"); x.className = "chip x"; x.textContent = "Remove";
-    x.onclick = () => { cmds.splice(i, 1); renderRows(); };
-    row.append(a, b, x); box.append(row);
+function renderCue() {
+  const c = cmds[cue];
+  $("#cueNext").textContent = c ? (c.label || c.cmd) : "End of the list";
+}
+function renderDls() {
+  const box = $("#dlCards"); box.replaceChildren();
+  dls.filter(d => d.name && d.date).sort((a, b) => a.date.localeCompare(b.date)).forEach(d => {
+    const days = Math.ceil((new Date(d.date + "T23:59:59") - Date.now()) / 864e5);
+    const c = el("div", "dl");
+    c.append(el("b", "", days < 0 ? "Past" : String(days)), el("span", "", (days === 1 ? "day left: " : "days left: ") + d.name));
+    box.append(c);
   });
 }
 
 async function load(first) {
-  S = await api("/api/state");
+  try {
+    S = await api("/api/state");
+    $("#live").classList.add("on");
+  } catch (e) { $("#live").classList.remove("on"); return; }
   $("#ip").textContent = "http://" + S.ip + ":5000";
   renderInbox(); renderAsks();
   if (first) {
-    $("#rOn").checked = S.reminder.on; $("#rMin").value = S.reminder.minutes;
-    $("#rText").value = S.reminder.text; $("#rSpeak").checked = S.reminder.speak;
-    $("#pc").value = S.pc; cmds = S.commands; renderRows(); renderRemote();
+    rems = S.reminders; dls = S.deadlines; cmds = S.commands; $("#pc").value = S.pc;
+    editor($("#rows"), cmds, CF); editor($("#remRows"), rems, RF, true); editor($("#dlRows"), dls, DF);
+    renderRemote(); renderDls();
   }
 }
 
@@ -230,46 +274,6 @@ $("#sendBtn").onclick = async () => {
 };
 $("#clear").onclick = async () => { await api("/api/clear", {}); load(); };
 
-[["Stretch and water", 60, "Stretch and drink some water."], ["Rest your eyes", 20, "Look away from the screen for a minute."]]
-  .forEach(([l, m, t]) => {
-    const b = document.createElement("button"); b.className = "chip"; b.textContent = l;
-    b.onclick = () => { $("#rMin").value = m; $("#rText").value = t; };
-    $("#rpre").append(b);
-  });
-$("#rSave").onclick = async () => {
-  await api("/api/reminder", { on: $("#rOn").checked ? "1" : "0", minutes: $("#rMin").value || "60",
-    text: $("#rText").value, speak: $("#rSpeak").checked ? "1" : "0" });
-  say("#rMsg", $("#rOn").checked ? "Saved. Reminders are on." : "Saved. Reminders are off.");
-};
-
-$("#addRow").onclick = () => { cmds.push({ label: "", cmd: "" }); renderRows(); };
-$("#setSave").onclick = async () => {
-  cmds = cmds.filter(c => c.cmd.trim());
-  await api("/api/settings", { pc: $("#pc").value, commands: JSON.stringify(cmds) });
-  renderRows(); renderRemote(); say("#setMsg", "Saved.");
-};
-
-function renderAsks() {
-  const box = $("#asks"); box.replaceChildren();
-  S.asks.forEach(a => {
-    const p = document.createElement("div"); p.className = "panel";
-    const t = document.createElement("b"); t.textContent = a.title;
-    const q = document.createElement("p"); q.textContent = a.text;
-    const row = document.createElement("div"); row.className = "row";
-    a.options.forEach(o => {
-      const b = document.createElement("button"); b.className = "btn"; b.textContent = o;
-      b.onclick = async () => { await api("/api/answer", { id: a.id, answer: o }); load(false); };
-      row.append(b);
-    });
-    p.append(t, q, row); box.append(p);
-  });
-}
-
-let cue = 0;
-function renderCue() {
-  const c = cmds[cue];
-  $("#cueNext").textContent = c ? "Next: " + (c.label || c.cmd) : "End of list";
-}
 $("#go").onclick = async () => {
   const c = cmds[cue]; if (!c) return;
   const r = await api("/api/command", { cmd: c.cmd });
@@ -299,6 +303,49 @@ function xy(e, force) {
 }
 pad.onpointerdown = e => { pad.setPointerCapture(e.pointerId); xy(e); pad.onpointermove = xy; };
 pad.onpointerup = e => { pad.onpointermove = null; xy(e, true); };
+
+const at = m => new Date(Date.now() + m * 6e4).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+[[25, 5], [50, 10], [90, 15]].forEach(([m, br]) => {
+  const b = el("button", "", m + " min focus, " + br + " break");
+  b.onclick = async () => {
+    await api("/api/timer", { minutes: m, text: "Focus block done. Take a break." });
+    await api("/api/timer", { minutes: m + br, text: "Break over. Back to it." });
+    say("#fMsg", "Started. I will tell you at " + at(m) + ".");
+  };
+  $("#fpre").append(b);
+});
+$("#fGo").onclick = async () => {
+  const m = Number($("#fMin").value); if (!(m > 0)) return;
+  const what = $("#fText").value.trim();
+  await api("/api/timer", { minutes: m, text: what ? what + ": time is up." : "Time is up." });
+  say("#fMsg", "Started. I will tell you at " + at(m) + ".");
+};
+
+[["Portfolio hour", { text: "Portfolio hour. Write one paragraph in English.", every: 0, at: "20:00" }],
+ ["Series writing", { text: "Time to work on the series.", every: 0, at: "18:00" }],
+ ["Stretch and water", { text: "Stretch and drink some water.", every: 60, at: "" }],
+ ["Rest your eyes", { text: "Look away from the screen for a minute.", every: 20, at: "" }]]
+.forEach(([l, o]) => {
+  const b = el("button", "chip", l);
+  b.onclick = () => { rems.push({ ...o }); editor($("#remRows"), rems, RF, true); };
+  $("#rpre").append(b);
+});
+$("#addRem").onclick = () => { rems.push({ text: "", every: 0, at: "" }); editor($("#remRows"), rems, RF, true); };
+$("#addDl").onclick = () => { dls.push({ name: "", date: "" }); editor($("#dlRows"), dls, DF); };
+$("#planSave").onclick = async () => {
+  const list = rems.filter(r => r.text && (r.every > 0 || r.at))
+    .map(r => ({ text: r.text, every: r.every > 0 ? r.every : 0, at: r.every > 0 ? "" : r.at, speak: true }));
+  await api("/api/reminder", { list: JSON.stringify(list) });
+  await api("/api/deadlines", { list: JSON.stringify(dls.filter(d => d.name && d.date)) });
+  renderDls(); say("#planMsg", "Saved.");
+};
+
+$("#addRow").onclick = () => { cmds.push({ label: "", cmd: "" }); editor($("#rows"), cmds, CF); };
+$("#setSave").onclick = async () => {
+  cmds = cmds.filter(c => c.cmd.trim());
+  await api("/api/settings", { pc: $("#pc").value, commands: JSON.stringify(cmds) });
+  editor($("#rows"), cmds, CF); renderRemote(); say("#setMsg", "Saved.");
+};
 
 load(true);
 setInterval(() => { if (!$("#inbox").hidden) load(false); }, 3000);

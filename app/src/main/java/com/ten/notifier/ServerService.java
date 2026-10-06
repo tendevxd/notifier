@@ -30,7 +30,14 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -107,6 +114,7 @@ public class ServerService extends Service {
                 e.printStackTrace();
             }
         }
+        if (udpThread == null) startDiscovery();
         scheduleReminder();
         return START_STICKY;
     }
@@ -197,6 +205,16 @@ public class ServerService extends Service {
                         r.put("msg", sendValue(arg(p, "name", ""), arg(p, "value", "")));
                         return json(r.toString());
                     }
+                    case "/api/timer": {
+                        final String tx = arg(p, "text", "Time is up.");
+                        long ms = (long) (Double.parseDouble(arg(p, "minutes", "1")) * 60000);
+                        handler.postDelayed(() -> show("Timer", tx, true, "info"), ms);
+                        return json("{\"ok\":true}");
+                    }
+                    case "/api/deadlines":
+                        new JSONArray(arg(p, "list", "[]"));
+                        prefs.edit().putString("deadlines", arg(p, "list", "[]")).apply();
+                        return json("{\"ok\":true}");
                     case "/api/clear":
                         prefs.edit().putString("history", "[]").apply();
                         return json("{\"ok\":true}");
@@ -271,37 +289,93 @@ public class ServerService extends Service {
         }).start();
     }
 
+    List<Runnable> tasks = new ArrayList<>();
+
     void scheduleReminder() {
-        if (reminderTask != null) handler.removeCallbacks(reminderTask);
-        reminderTask = null;
-        if (!prefs.getBoolean("rem_on", false)) return;
-
-        final long ms = Math.max(1, prefs.getInt("rem_min", 60)) * 60000L;
-        reminderTask = new Runnable() {
-            @Override
-            public void run() {
-                show("Reminder", prefs.getString("rem_text", "Stretch and drink water."),
-                        prefs.getBoolean("rem_speak", true), "info");
-                handler.postDelayed(this, ms);
-            }
-        };
-        handler.postDelayed(reminderTask, ms);
-    }
-
-    void saveReminder(Map<String, String> p) {
-        int min = 60;
+        for (Runnable r : tasks) handler.removeCallbacks(r);
+        tasks.clear();
         try {
-            min = Integer.parseInt(arg(p, "minutes", "60"));
+            JSONArray a = new JSONArray(prefs.getString("reminders", "[]"));
+            for (int i = 0; i < a.length(); i++) {
+                final JSONObject o = a.getJSONObject(i);
+                final long every = o.optInt("every", 0) * 60000L;
+                final String at = o.optString("at", "");
+                Runnable r = new Runnable() {
+                    @Override
+                    public void run() {
+                        show("Reminder", o.optString("text"), o.optBoolean("speak", true), "info");
+                        handler.postDelayed(this, every > 0 ? every : 86400000L);
+                    }
+                };
+                tasks.add(r);
+                handler.postDelayed(r, every > 0 ? every : untilMs(at));
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        prefs.edit()
-                .putBoolean("rem_on", "1".equals(p.get("on")))
-                .putInt("rem_min", Math.max(1, min))
-                .putString("rem_text", arg(p, "text", "Stretch and drink water."))
-                .putBoolean("rem_speak", "1".equals(p.get("speak")))
-                .apply();
+    }
+
+    long untilMs(String hhmm) {
+        try {
+            String[] t = hhmm.split(":");
+            Calendar c = Calendar.getInstance();
+            c.set(Calendar.HOUR_OF_DAY, Integer.parseInt(t[0]));
+            c.set(Calendar.MINUTE, Integer.parseInt(t[1]));
+            c.set(Calendar.SECOND, 0);
+            if (c.getTimeInMillis() <= System.currentTimeMillis()) c.add(Calendar.DAY_OF_YEAR, 1);
+            return c.getTimeInMillis() - System.currentTimeMillis();
+        } catch (Exception e) {
+            return 86400000L;
+        }
+    }
+
+    void saveReminder(Map<String, String> p) throws Exception {
+        String list = arg(p, "list", "[]");
+        new JSONArray(list);
+        prefs.edit().putString("reminders", list).apply();
         handler.post(this::scheduleReminder);
+    }
+
+    Thread udpThread;
+
+    void startDiscovery() {
+        udpThread = new Thread(() -> {
+            try {
+                WifiManager wm = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+                wm.createMulticastLock("notifier").acquire();
+                DatagramSocket s = new DatagramSocket(null);
+                s.setReuseAddress(true);
+                s.bind(new InetSocketAddress(5001));
+                byte[] buf = new byte[64];
+                while (true) {
+                    DatagramPacket in = new DatagramPacket(buf, buf.length);
+                    s.receive(in);
+                    if (new String(in.getData(), 0, in.getLength()).startsWith("NOTIFIER?")) {
+                        byte[] r = "NOTIFIER 5000".getBytes();
+                        s.send(new DatagramPacket(r, r.length, in.getAddress(), in.getPort()));
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+        udpThread.start();
+    }
+
+    String discoverPc() {
+        try (DatagramSocket s = new DatagramSocket()) {
+            s.setBroadcast(true);
+            s.setSoTimeout(1500);
+            byte[] q = "PC?".getBytes();
+            s.send(new DatagramPacket(q, q.length, InetAddress.getByName("255.255.255.255"), 5002));
+            DatagramPacket in = new DatagramPacket(new byte[64], 64);
+            s.receive(in);
+            String[] t = new String(in.getData(), 0, in.getLength()).trim().split(" ");
+            if (t[0].equals("PC")) return in.getAddress().getHostAddress() + ":" + t[1];
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "";
     }
 
     String ip() {
@@ -314,12 +388,8 @@ public class ServerService extends Service {
         JSONObject o = new JSONObject();
         o.put("ip", ip());
         o.put("history", new JSONArray(prefs.getString("history", "[]")));
-        JSONObject r = new JSONObject();
-        r.put("on", prefs.getBoolean("rem_on", false));
-        r.put("minutes", prefs.getInt("rem_min", 60));
-        r.put("text", prefs.getString("rem_text", "Stretch and drink water."));
-        r.put("speak", prefs.getBoolean("rem_speak", true));
-        o.put("reminder", r);
+        o.put("reminders", new JSONArray(prefs.getString("reminders", "[]")));
+        o.put("deadlines", new JSONArray(prefs.getString("deadlines", "[]")));
         JSONArray ak = new JSONArray();
         for (JSONObject a : asks.values()) ak.put(a);
         o.put("asks", ak);
@@ -346,7 +416,11 @@ public class ServerService extends Service {
 
     String post(String path, String body) {
         String pc = prefs.getString("pc", "");
-        if (pc.isEmpty()) return "Set the PC address in Setup first.";
+        if (pc.isEmpty()) {
+            pc = discoverPc();
+            if (pc.isEmpty()) return "Couldn't find the PC. Is pc_remote.py running?";
+            prefs.edit().putString("pc", pc).apply();
+        }
         try {
             HttpURLConnection c = (HttpURLConnection) new URL("http://" + pc + path).openConnection();
             c.setConnectTimeout(3000);
@@ -361,6 +435,11 @@ public class ServerService extends Service {
             c.disconnect();
             return code == 200 ? "Sent." : "PC answered " + code + ".";
         } catch (Exception e) {
+            String d = discoverPc();
+            if (!d.isEmpty() && !d.equals(pc)) {
+                prefs.edit().putString("pc", d).apply();
+                return post(path, body);
+            }
             return "Couldn't reach the PC. Is pc_remote.py running?";
         }
     }
