@@ -32,6 +32,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import fi.iki.elonen.NanoHTTPD;
 
@@ -46,6 +47,8 @@ public class ServerService extends Service {
     Handler handler = new Handler(Looper.getMainLooper());
     Runnable reminderTask;
     int nid = 100;
+    ConcurrentHashMap<String, JSONObject> asks = new ConcurrentHashMap<>();
+    ConcurrentHashMap<String, String> answers = new ConcurrentHashMap<>();
 
     @Override
     public IBinder onBind(Intent i) {
@@ -162,6 +165,36 @@ public class ServerService extends Service {
                     case "/api/command": {
                         JSONObject r = new JSONObject();
                         r.put("msg", sendCommand(arg(p, "cmd", "")));
+                        return json(r.toString());
+                    }
+                    case "/ask": {
+                        String id = String.valueOf(System.currentTimeMillis());
+                        JSONObject a = new JSONObject();
+                        a.put("id", id);
+                        a.put("title", arg(p, "title", "Question"));
+                        a.put("text", arg(p, "text", ""));
+                        JSONArray opts = new JSONArray();
+                        for (String o : arg(p, "options", "Yes,No").split(",")) opts.put(o.trim());
+                        a.put("options", opts);
+                        asks.put(id, a);
+                        show(a.getString("title"), a.getString("text"), true, "warn");
+                        JSONObject r = new JSONObject();
+                        r.put("id", id);
+                        return json(r.toString());
+                    }
+                    case "/api/answer":
+                        answers.put(arg(p, "id", ""), arg(p, "answer", ""));
+                        asks.remove(arg(p, "id", ""));
+                        return json("{\"ok\":true}");
+                    case "/answer": {
+                        String ans = answers.get(arg(p, "id", ""));
+                        JSONObject r = new JSONObject();
+                        r.put("answer", ans == null ? JSONObject.NULL : ans);
+                        return json(r.toString());
+                    }
+                    case "/api/value": {
+                        JSONObject r = new JSONObject();
+                        r.put("msg", sendValue(arg(p, "name", ""), arg(p, "value", "")));
                         return json(r.toString());
                     }
                     case "/api/clear":
@@ -287,23 +320,42 @@ public class ServerService extends Service {
         r.put("text", prefs.getString("rem_text", "Stretch and drink water."));
         r.put("speak", prefs.getBoolean("rem_speak", true));
         o.put("reminder", r);
+        JSONArray ak = new JSONArray();
+        for (JSONObject a : asks.values()) ak.put(a);
+        o.put("asks", ak);
         o.put("pc", prefs.getString("pc", ""));
         o.put("commands", new JSONArray(prefs.getString("commands", "[]")));
         return o;
     }
 
     String sendCommand(String cmd) {
+        try {
+            return post("/cmd", "cmd=" + URLEncoder.encode(cmd, "UTF-8"));
+        } catch (Exception e) {
+            return "Error.";
+        }
+    }
+
+    String sendValue(String name, String v) {
+        try {
+            return post("/val", "name=" + URLEncoder.encode(name, "UTF-8") + "&value=" + URLEncoder.encode(v, "UTF-8"));
+        } catch (Exception e) {
+            return "Error.";
+        }
+    }
+
+    String post(String path, String body) {
         String pc = prefs.getString("pc", "");
         if (pc.isEmpty()) return "Set the PC address in Setup first.";
         try {
-            HttpURLConnection c = (HttpURLConnection) new URL("http://" + pc + "/cmd").openConnection();
+            HttpURLConnection c = (HttpURLConnection) new URL("http://" + pc + path).openConnection();
             c.setConnectTimeout(3000);
             c.setReadTimeout(3000);
             c.setRequestMethod("POST");
             c.setDoOutput(true);
             c.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
             OutputStream os = c.getOutputStream();
-            os.write(("cmd=" + URLEncoder.encode(cmd, "UTF-8")).getBytes("UTF-8"));
+            os.write(body.getBytes("UTF-8"));
             os.close();
             int code = c.getResponseCode();
             c.disconnect();
