@@ -392,6 +392,10 @@ public class ServerService extends Service {
                     case "/api/say":
                         if (ttsReady) say(arg(p, "text", ""), arg(p, "lang", ""));
                         return json("{\"ok\":true}");
+                    case "/api/media": {
+                        String t = fetchPc("/media");
+                        return json(t == null ? "{}" : t);
+                    }
                     case "/api/clear":
                         prefs.edit().putString("history", "[]").apply();
                         return json("{\"ok\":true}");
@@ -690,12 +694,9 @@ public class ServerService extends Service {
     }
 
     void sendUdp(String msg) {
+        if (msg.isEmpty()) return;
         try {
-            String host = pcHost();
-            if (host == null || msg.isEmpty()) return;
-            if (udpOut == null) udpOut = new DatagramSocket();
-            byte[] b = msg.getBytes("UTF-8");
-            udpOut.send(new DatagramPacket(b, b.length, InetAddress.getByName(host), 5003));
+            post("/input", "msg=" + URLEncoder.encode(msg, "UTF-8"));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -789,7 +790,14 @@ public class ServerService extends Service {
             os.write(body.getBytes("UTF-8"));
             os.close();
             int code = c.getResponseCode();
-            c.disconnect();
+            InputStream rs = code < 400 ? c.getInputStream() : c.getErrorStream();
+            if (rs != null) {
+                byte[] drain = new byte[1024];
+                while (rs.read(drain) >= 0) {
+                    // read the reply so the connection can be reused
+                }
+                rs.close();
+            }
             return code == 200 ? "Sent." : "PC answered " + code + ".";
         } catch (Exception e) {
             String d = discoverPc();

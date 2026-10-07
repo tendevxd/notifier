@@ -191,6 +191,22 @@
   </section>
 
   <section class="view" id="remote" hidden>
+    <div class="sec"><h2>Now playing</h2></div>
+    <div class="panel">
+      <p style="margin:0 0 12px"><b id="npTitle">Nothing playing</b><br><span class="hint" id="npArtist" style="margin:0"></span></p>
+      <div class="row f">
+        <button class="btn ghost" data-media="prev">Previous</button>
+        <button class="btn" id="npPlay">Play</button>
+        <button class="btn ghost" data-media="next">Next</button>
+      </div>
+      <label for="vol">Volume <span id="volOut">-</span></label>
+      <input class="sl" id="vol" type="range" min="0" max="100" step="1" value="30">
+      <div class="row">
+        <button class="btn ghost" id="volDown">Volume down</button>
+        <button class="btn ghost" id="volMute">Mute</button>
+        <button class="btn ghost" id="volUp">Volume up</button>
+      </div>
+    </div>
     <div class="sec"><h2>Touchpad</h2></div>
     <div class="panel">
       <div class="touch" id="touch"><span>Drag to move. Tap to click.</span></div>
@@ -208,6 +224,7 @@
     <div class="panel">
       <div class="row f"><input id="typeIn" type="text" placeholder="Type here, then send"><button class="btn x sm" id="typeGo">Type</button></div>
       <div class="chips" id="keys"></div>
+      <div class="chips" id="combos"></div>
       <div class="row"><button class="btn ghost" data-key="left">Previous slide</button><button class="btn ghost" data-key="right">Next slide</button></div>
     </div>
     <div class="sec"><h2>Sound board</h2></div>
@@ -220,10 +237,25 @@
     </details>
     <div class="sec"><h2>Watch a program</h2></div>
     <div class="panel">
-      <p class="hint">Pick a running program. The phone tells you when it closes.</p>
+      <div class="seg" id="procMode">
+        <button data-m="watch" aria-pressed="true">Watch</button>
+        <button data-m="close" aria-pressed="false">Close</button>
+      </div>
+      <p class="hint">Watch: the phone tells you when the program closes. Close: force it to quit (for a frozen app).</p>
       <div class="chips" id="procs"></div>
       <button class="btn ghost" id="procRefresh">Refresh the list</button>
       <p class="msg" id="procMsg"></p>
+    </div>
+    <div class="sec"><h2>Power</h2></div>
+    <div class="panel">
+      <div class="grid">
+        <button data-power="lock">Lock</button><button data-power="sleep">Sleep</button>
+        <button data-power="screenoff">Screen off</button><button data-power="restart">Restart</button>
+      </div>
+      <div class="row f"><input id="shutMin" type="number" min="1" value="30"><button class="btn" id="shutGo">Shut down in minutes</button></div>
+      <button class="btn ghost" id="shutCancel">Cancel shutdown</button>
+      <label class="check" style="margin-top:14px"><input id="awakeOn" type="checkbox"> Keep the PC awake (for long renders)</label>
+      <p class="msg" id="pwMsg"></p>
     </div>
     <div class="sec"><h2>Away lock</h2></div>
     <div class="panel">
@@ -389,7 +421,7 @@ function view(v) {
   document.querySelectorAll(".view").forEach(e => e.hidden = e.id !== v);
   document.querySelectorAll("nav button").forEach(b => b.setAttribute("aria-current", b.dataset.v === v));
   window.scrollTo(0, 0);
-  if (v === "remote") { loadProcs().catch(() => {}); loadAway().catch(() => {}); }
+  if (v === "remote") { loadProcs().catch(() => {}); loadAway().catch(() => {}); loadMedia().catch(() => {}); }
 }
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => view(b.dataset.v));
 
@@ -748,14 +780,24 @@ async function loadProcs() {
   $("#procMsg").textContent = "";
   r.list.forEach(n => {
     const b = el("button", "chip", n);
-    b.onclick = async () => { const m = await api("/api/watchproc", { name: n }); say("#procMsg", m.msg === "Sent." ? "Watching " + n + "." : m.msg, m.msg !== "Sent."); };
+    let armed = false;
+    b.onclick = async () => {
+      if (procMode === "close") {
+        if (!armed) { armed = true; b.textContent = "Tap again to close " + n; setTimeout(() => { armed = false; b.textContent = n; }, 3000); return; }
+        armed = false; b.textContent = n;
+        const m = await api("/api/command", { cmd: "kill:" + n });
+        return say("#procMsg", m.msg === "Sent." ? "Closing " + n + "." : m.msg, m.msg !== "Sent.");
+      }
+      const m = await api("/api/watchproc", { name: n });
+      say("#procMsg", m.msg === "Sent." ? "Watching " + n + "." : m.msg, m.msg !== "Sent.");
+    };
     box.append(b);
   });
 }
 $("#procRefresh").onclick = () => loadProcs().catch(() => {});
 async function loadAway() {
   const r = await api("/api/pcget");
-  $("#awayOn").checked = !!r.lock_away; $("#awayMin").value = r.away_min || 3;
+  $("#awakeOn").checked = !!r.keep_awake; $("#awayOn").checked = !!r.lock_away; $("#awayMin").value = r.away_min || 3;
 }
 $("#awaySave").onclick = async () => {
   await api("/api/pcset", { name: "away_min", value: $("#awayMin").value || "3" });
@@ -788,6 +830,60 @@ $("#chatIn").onkeydown = e => { if (e.key === "Enter") sendChat(); };
 $("#chatClear").onclick = () => { msgs = []; renderChat(); };
 renderChat();
 
+let procMode = "watch", volBusy = 0, lastVol = 0;
+document.querySelectorAll("#procMode button").forEach(b => b.onclick = () => {
+  procMode = b.dataset.m;
+  document.querySelectorAll("#procMode button").forEach(x => x.setAttribute("aria-pressed", x === b));
+});
+[["Alt+Tab", "alt+tab"], ["Show desktop", "win+d"], ["Task view", "win+tab"], ["Copy", "ctrl+c"], ["Paste", "ctrl+v"],
+ ["Undo", "ctrl+z"], ["Fullscreen", "f11"], ["Task manager", "ctrl+shift+esc"]].forEach(([l, c]) => {
+  const b = el("button", "chip", l); b.onclick = () => inp("combo " + c); $("#combos").append(b);
+});
+
+async function loadMedia() {
+  const r = await api("/api/media");
+  $("#npTitle").textContent = r.title || "Nothing playing";
+  $("#npArtist").textContent = r.artist || "";
+  $("#npPlay").textContent = r.playing ? "Pause" : "Play";
+  $("#volMute").textContent = r.muted ? "Unmute" : "Mute";
+  if (r.volume !== undefined) {
+    $("#volOut").textContent = r.volume + "%";
+    if (Date.now() - volBusy > 3000) $("#vol").value = r.volume;
+  }
+}
+const mediaKey = k => { inp("media " + k); setTimeout(() => loadMedia().catch(() => {}), 700); };
+document.querySelectorAll("[data-media]").forEach(b => b.onclick = () => mediaKey(b.dataset.media));
+$("#npPlay").onclick = () => mediaKey("playpause");
+$("#volUp").onclick = () => mediaKey("volup");
+$("#volDown").onclick = () => mediaKey("voldown");
+$("#volMute").onclick = () => { inp("mute"); setTimeout(() => loadMedia().catch(() => {}), 700); };
+$("#vol").oninput = () => {
+  volBusy = Date.now(); $("#volOut").textContent = $("#vol").value + "%";
+  if (Date.now() - lastVol > 120) { lastVol = Date.now(); inp("vol " + $("#vol").value); }
+};
+$("#vol").onchange = () => inp("vol " + $("#vol").value);
+
+document.querySelectorAll("[data-power]").forEach(b => {
+  const label = b.textContent; let armed = false;
+  b.onclick = async () => {
+    const a = b.dataset.power;
+    if (a === "restart" && !armed) { armed = true; b.textContent = "Tap again to restart"; setTimeout(() => { armed = false; b.textContent = label; }, 3000); return; }
+    armed = false; b.textContent = label;
+    const r = await api("/api/command", { cmd: "power:" + a });
+    say("#pwMsg", r.msg === "Sent." ? label + " sent." : r.msg, r.msg !== "Sent.");
+  };
+});
+$("#shutGo").onclick = async () => {
+  const m = Number($("#shutMin").value); if (!(m > 0)) return;
+  const r = await api("/api/command", { cmd: "power:shutdown:" + m });
+  say("#pwMsg", r.msg === "Sent." ? "The PC will shut down in " + m + " minutes." : r.msg, r.msg !== "Sent.");
+};
+$("#shutCancel").onclick = async () => {
+  const r = await api("/api/command", { cmd: "power:cancel" });
+  say("#pwMsg", r.msg === "Sent." ? "Shutdown cancelled." : r.msg, r.msg !== "Sent.");
+};
+$("#awakeOn").onchange = () => api("/api/pcset", { name: "keep_awake", value: $("#awakeOn").checked ? "1" : "0" });
+
 function handleShare() {
   const q = new URLSearchParams(location.search).get("share");
   if (!q) return;
@@ -808,7 +904,10 @@ $("#unlock").onclick = async () => {
   const r = await api("/api/unlock");
   if (r.ok) start(); else $("#lock").hidden = false;
 })();
-setInterval(() => { if (!$("#inbox").hidden || !$("#stage").hidden || !$("#pc").hidden || !$("#links").hidden) load(false); }, 3000);
+setInterval(() => {
+  if (!$("#inbox").hidden || !$("#stage").hidden || !$("#pc").hidden || !$("#links").hidden) load(false);
+  if (!$("#remote").hidden) loadMedia().catch(() => {});
+}, 3000);
 </script>
 </body>
 </html>
