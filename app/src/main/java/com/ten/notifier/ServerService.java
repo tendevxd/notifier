@@ -7,6 +7,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
+import android.content.ContentValues;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
@@ -23,13 +24,18 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.provider.MediaStore;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
+import android.util.Base64;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -40,6 +46,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
@@ -147,6 +154,12 @@ public class ServerService extends Service {
             return newFixedLengthResponse(Response.Status.OK, "application/json", s);
         }
 
+        Response shotFile(String name) throws Exception {
+            File f = new File(new File(getFilesDir(), "shots"), new File(name).getName());
+            if (!f.exists()) return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "not found");
+            return newFixedLengthResponse(Response.Status.OK, "image/jpeg", new FileInputStream(f), f.length());
+        }
+
         Response page() throws Exception {
             InputStream in = getAssets().open("index.html");
             ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -165,11 +178,12 @@ public class ServerService extends Service {
                 if (s.getMethod() == Method.POST) s.parseBody(files);
                 Map<String, String> p = s.getParms();
                 String pin = prefs.getString("pin", "");
-                if (uri.startsWith("/api/") && !uri.equals("/api/unlock") && !pin.isEmpty()
+                if ((uri.startsWith("/api/") || uri.startsWith("/shots/")) && !uri.equals("/api/unlock") && !pin.isEmpty()
                         && !"127.0.0.1".equals(s.getRemoteIpAddress()) && !pin.equals(p.get("pin"))) {
                     return json("{\"locked\":true}");
                 }
 
+                if (uri.startsWith("/shots/")) return shotFile(uri.substring(7));
                 switch (uri) {
                     case "/":
                         return page();
@@ -281,6 +295,55 @@ public class ServerService extends Service {
                         show("Clipboard", "Copied from your PC: " + (t.length() > 80 ? t.substring(0, 80) + "..." : t), false, "info");
                         return json("{\"ok\":true}");
                     }
+                    case "/image": {
+                        String b64 = files.get("postData");
+                        if (b64 == null) return json("{\"ok\":false}");
+                        File dir = new File(getFilesDir(), "shots");
+                        dir.mkdirs();
+                        String fname = System.currentTimeMillis() + ".jpg";
+                        FileOutputStream fo = new FileOutputStream(new File(dir, fname));
+                        fo.write(Base64.decode(b64, Base64.DEFAULT));
+                        fo.close();
+                        File[] all = dir.listFiles();
+                        if (all != null && all.length > 30) {
+                            Arrays.sort(all, (f1, f2) -> Long.compare(f1.lastModified(), f2.lastModified()));
+                            for (int i = 0; i < all.length - 30; i++) all[i].delete();
+                        }
+                        if (!"1".equals(p.get("live"))) {
+                            show(arg(p, "title", "Screenshot"), arg(p, "text", "Screenshot from your PC"), false, "info", null, fname);
+                        }
+                        return json("{\"ok\":true}");
+                    }
+                    case "/api/shot": {
+                        JSONObject r = new JSONObject();
+                        r.put("msg", post("/shot?monitor=" + URLEncoder.encode(arg(p, "monitor", "0"), "UTF-8")
+                                + "&delay=" + URLEncoder.encode(arg(p, "delay", "0"), "UTF-8")
+                                + "&live=" + URLEncoder.encode(arg(p, "live", "0"), "UTF-8"), "go=1"));
+                        return json(r.toString());
+                    }
+                    case "/api/saveshot": {
+                        JSONObject r = new JSONObject();
+                        r.put("msg", saveToGallery(arg(p, "name", "")));
+                        return json(r.toString());
+                    }
+                    case "/api/open": {
+                        String u = arg(p, "url", "").trim();
+                        JSONObject r = new JSONObject();
+                        if (u.isEmpty()) {
+                            r.put("msg", "Paste a link first.");
+                        } else {
+                            String m = post("/open", "url=" + URLEncoder.encode(u, "UTF-8"));
+                            if (m.equals("Sent.")) addLinkHistory(u);
+                            r.put("msg", m);
+                        }
+                        return json(r.toString());
+                    }
+                    case "/api/links":
+                        new JSONArray(arg(p, "links", "[]"));
+                        new JSONArray(arg(p, "modes", "[]"));
+                        prefs.edit().putString("links", arg(p, "links", "[]"))
+                                .putString("modes", arg(p, "modes", "[]")).apply();
+                        return json("{\"ok\":true}");
                     case "/api/clear":
                         prefs.edit().putString("history", "[]").apply();
                         return json("{\"ok\":true}");
@@ -298,6 +361,10 @@ public class ServerService extends Service {
     }
 
     void show(String title, String text, boolean speak, String type, String lang) {
+        show(title, text, speak, type, lang, null);
+    }
+
+    void show(String title, String text, boolean speak, String type, String lang, String img) {
         if (!type.equals("warn") && !type.equals("error")) type = "info";
         boolean quiet = !type.equals("error") && quietNow();
         String chan = quiet ? "quiet" : type;
@@ -314,12 +381,12 @@ public class ServerService extends Service {
                 .build();
         getSystemService(NotificationManager.class).notify(nid++, n);
 
-        addHistory(title, text, type);
+        addHistory(title, text, type, img);
         if (speak && ttsReady && !quiet) say(text, lang);
         if (type.equals("error")) flash();
     }
 
-    synchronized void addHistory(String title, String text, String type) {
+    synchronized void addHistory(String title, String text, String type, String img) {
         try {
             JSONArray old = new JSONArray(prefs.getString("history", "[]"));
             JSONArray arr = new JSONArray();
@@ -327,6 +394,7 @@ public class ServerService extends Service {
             o.put("title", title);
             o.put("text", text);
             o.put("type", type);
+            if (img != null) o.put("img", img);
             o.put("t", System.currentTimeMillis());
             arr.put(o);
             for (int i = 0; i < old.length() && i < 49; i++) arr.put(old.get(i));
@@ -459,6 +527,42 @@ public class ServerService extends Service {
         return "";
     }
 
+    synchronized void addLinkHistory(String u) {
+        try {
+            JSONArray old = new JSONArray(prefs.getString("linkhist", "[]"));
+            JSONArray arr = new JSONArray();
+            arr.put(u);
+            for (int i = 0; i < old.length() && arr.length() < 10; i++) {
+                if (!u.equals(old.getString(i))) arr.put(old.getString(i));
+            }
+            prefs.edit().putString("linkhist", arr.toString()).apply();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    String saveToGallery(String name) {
+        if (Build.VERSION.SDK_INT < 29) return "Needs Android 10 or newer.";
+        try {
+            File f = new File(new File(getFilesDir(), "shots"), new File(name).getName());
+            ContentValues v = new ContentValues();
+            v.put(MediaStore.Images.Media.DISPLAY_NAME, f.getName());
+            v.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+            v.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/PromptDesk");
+            Uri u = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v);
+            OutputStream os = getContentResolver().openOutputStream(u);
+            FileInputStream in = new FileInputStream(f);
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) > 0) os.write(buf, 0, n);
+            in.close();
+            os.close();
+            return "Saved to your gallery.";
+        } catch (Exception e) {
+            return "Couldn't save it.";
+        }
+    }
+
     void say(String text, String lang) {
         String l = (lang == null || lang.isEmpty()) ? prefs.getString("tts_lang", "") : lang;
         tts.setLanguage(l.isEmpty() ? Locale.getDefault() : new Locale(l));
@@ -499,6 +603,16 @@ public class ServerService extends Service {
         JSONArray ak = new JSONArray();
         for (JSONObject a : asks.values()) ak.put(a);
         o.put("asks", ak);
+        o.put("links", new JSONArray(prefs.getString("links", "[]")));
+        o.put("modes", new JSONArray(prefs.getString("modes", "[]")));
+        o.put("linkhist", new JSONArray(prefs.getString("linkhist", "[]")));
+        JSONArray sh = new JSONArray();
+        File[] fs = new File(getFilesDir(), "shots").listFiles();
+        if (fs != null) {
+            Arrays.sort(fs, (x, y) -> Long.compare(y.lastModified(), x.lastModified()));
+            for (int i = 0; i < fs.length && i < 8; i++) sh.put(fs[i].getName());
+        }
+        o.put("shots", sh);
         o.put("stats", stats);
         o.put("statsAge", System.currentTimeMillis() - stats.optLong("t", 0));
         JSONObject pf = new JSONObject();

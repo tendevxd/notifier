@@ -15,6 +15,7 @@ import android.webkit.WebViewClient;
 public class MainActivity extends Activity {
     static final String URL = "http://127.0.0.1:5000/";
     WebView web;
+    String target = URL;
     ValueCallback<Uri[]> filePath;
 
     @Override
@@ -32,7 +33,7 @@ public class MainActivity extends Activity {
             @Override
             public void onReceivedError(WebView v, WebResourceRequest r, WebResourceError e) {
                 if (r.isForMainFrame()) {
-                    v.postDelayed(() -> v.loadUrl(URL), 700);
+                    v.postDelayed(() -> v.loadUrl(target), 700);
                 }
             }
         });
@@ -51,7 +52,21 @@ public class MainActivity extends Activity {
             }
         });
         setContentView(web);
-        web.loadUrl(URL);
+        handle(getIntent());
+    }
+
+    void handle(Intent i) {
+        String t = i.getStringExtra(Intent.EXTRA_TEXT);
+        target = URL;
+        if (Intent.ACTION_SEND.equals(i.getAction()) && t != null) target = URL + "?share=" + Uri.encode(t);
+        web.loadUrl(target);
+    }
+
+    @Override
+    protected void onNewIntent(Intent i) {
+        super.onNewIntent(i);
+        setIntent(i);
+        handle(i);
     }
 
     @Override
