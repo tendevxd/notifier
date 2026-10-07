@@ -90,13 +90,24 @@
   @media (prefers-reduced-motion: reduce) { .view { animation:none; } }
   nav { position:fixed; left:50%; transform:translateX(-50%); bottom:max(12px,env(safe-area-inset-bottom));
         width:calc(100% - 24px); max-width:496px; display:flex; background:#0b0b11d9; backdrop-filter:blur(18px);
-        -webkit-backdrop-filter:blur(18px); border:1px solid #ffffff1c; border-radius:28px; padding:6px; }
-  nav button { flex:1; background:none; border:0; color:var(--mute); padding:4px 0 2px; font-size:.68rem; font-weight:600;
+        -webkit-backdrop-filter:blur(18px); border:1px solid #ffffff1c; border-radius:28px; padding:6px; overflow-x:auto; scrollbar-width:none; }
+  nav button { flex:0 0 17%; background:none; border:0; color:var(--mute); padding:4px 0 2px; font-size:.68rem; font-weight:600;
                display:flex; flex-direction:column; align-items:center; gap:2px; }
   nav .ic { width:46px; height:30px; border-radius:15px; display:grid; place-items:center; }
   nav svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
   nav button[aria-current="true"] { color:#fff; }
   nav button[aria-current="true"] .ic { background:var(--grad); box-shadow:0 4px 16px #8b5cff66; }
+  #con { background:#000; border:1px solid var(--line); border-radius:14px; padding:12px; margin:12px 0 0; max-height:260px;
+         overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace; color:#9be9b8; white-space:pre-wrap; word-break:break-word; }
+  .touch { height:230px; border-radius:20px; border:1px solid var(--line); touch-action:none; display:grid; place-items:center;
+           color:var(--mute); user-select:none; background:radial-gradient(circle at 50% 40%, #8b5cff22, #ffffff06); }
+  .pads { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:12px; }
+  .pad1 { aspect-ratio:1; background:#ffffff0a; border:1px solid var(--line); border-radius:18px; font-weight:800; font-size:1.1rem;
+          touch-action:none; user-select:none; -webkit-user-select:none; }
+  .pad1.on { background:var(--grad); border-color:transparent; box-shadow:0 0 28px #8b5cff88; }
+  .bub { max-width:86%; padding:10px 14px; border-radius:18px; margin:0 0 10px; word-break:break-word; white-space:pre-wrap; }
+  .bub.me { margin-left:auto; background:var(--grad); } .bub.ai { background:#ffffff10; border:1px solid var(--line); }
+  .btn.sm { width:auto; padding:12px 18px; }
 </style>
 </head>
 <body>
@@ -152,6 +163,17 @@
     <div class="grid" id="cmds"></div>
     <p class="empty" id="noCmds">No buttons yet. Add them in Setup.</p>
     <p class="msg" id="cMsg"></p>
+    <div class="sec"><h2>Pads</h2></div>
+    <div class="panel">
+      <div class="pads" id="pads"></div>
+      <p class="hint">Each pad sends an OSC message and a MIDI note to your PC. With none saved you get 8 default pads.</p>
+      <details><summary>Edit pads</summary>
+        <div id="padRows"></div>
+        <button class="btn ghost" id="addPad">Add pad</button>
+        <button class="btn" id="padSave" style="margin-top:8px">Save pads</button>
+        <p class="msg" id="padMsg"></p>
+      </details>
+    </div>
     <div class="sec"><h2>Controls</h2></div>
     <div class="panel">
       <label>Slider 1</label><input class="sl" data-n="slider1" type="range" min="0" max="1" step="0.01">
@@ -165,6 +187,59 @@
       <p class="hint">Sends tilt and shake to your PC while the app is open.</p>
       <p><b id="tiltOut">Off</b></p>
       <button class="btn ghost" id="sensBtn">Start sending</button>
+    </div>
+  </section>
+
+  <section class="view" id="remote" hidden>
+    <div class="sec"><h2>Touchpad</h2></div>
+    <div class="panel">
+      <div class="touch" id="touch"><span>Drag to move. Tap to click.</span></div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn ghost" data-click="left">Left click</button>
+        <button class="btn ghost" data-click="right">Right click</button>
+        <button class="btn ghost" data-click="double">Double</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn ghost" data-scroll="3">Scroll up</button>
+        <button class="btn ghost" data-scroll="-3">Scroll down</button>
+      </div>
+    </div>
+    <div class="sec"><h2>Keyboard</h2></div>
+    <div class="panel">
+      <div class="row f"><input id="typeIn" type="text" placeholder="Type here, then send"><button class="btn x sm" id="typeGo">Type</button></div>
+      <div class="chips" id="keys"></div>
+      <div class="row"><button class="btn ghost" data-key="left">Previous slide</button><button class="btn ghost" data-key="right">Next slide</button></div>
+    </div>
+    <div class="sec"><h2>Sound board</h2></div>
+    <div class="grid" id="sndGrid"></div>
+    <p class="empty" id="noSnd">No sounds yet. Add a file path below.</p>
+    <button class="btn ghost" id="stopSnd" style="margin-bottom:10px">Stop all sounds</button>
+    <details><summary>Edit sounds</summary>
+      <div class="panel"><div id="sndRows"></div><button class="btn ghost" id="addSnd">Add sound</button></div>
+      <button class="btn" id="sndSave">Save sounds</button><p class="msg" id="sndMsg"></p>
+    </details>
+    <div class="sec"><h2>Watch a program</h2></div>
+    <div class="panel">
+      <p class="hint">Pick a running program. The phone tells you when it closes.</p>
+      <div class="chips" id="procs"></div>
+      <button class="btn ghost" id="procRefresh">Refresh the list</button>
+      <p class="msg" id="procMsg"></p>
+    </div>
+    <div class="sec"><h2>Away lock</h2></div>
+    <div class="panel">
+      <label class="check f"><input id="awayOn" type="checkbox"> Lock my PC when this phone leaves the Wi-Fi</label>
+      <div class="f"><label for="awayMin">After how many minutes</label><input id="awayMin" type="number" min="1" value="3"></div>
+      <button class="btn" id="awaySave">Save</button>
+      <p class="msg" id="awayMsg"></p>
+    </div>
+  </section>
+
+  <section class="view" id="susie" hidden>
+    <div class="sec"><h2>Susie</h2><button class="chip x" id="chatClear">New chat</button></div>
+    <div id="chat"></div>
+    <div class="panel">
+      <div class="row"><input id="chatIn" type="text" placeholder="Say something"><button class="btn x sm" id="chatGo">Send</button></div>
+      <label class="check" style="margin-top:12px"><input id="chatSpeak" type="checkbox"> Read replies aloud</label>
     </div>
   </section>
 
@@ -198,6 +273,13 @@
   </section>
 
   <section class="view" id="pc" hidden>
+    <div class="sec"><h2>PC script</h2></div>
+    <div class="panel">
+      <p class="msg" id="pcState" style="margin:0 0 12px"></p>
+      <div class="row"><button class="btn ghost" id="conBtn">Show console</button><button class="btn ghost" id="restartBtn">Restart script</button></div>
+      <pre id="con" hidden></pre>
+      <p class="msg" id="conMsg"></p>
+    </div>
     <div class="sec"><h2>Screenshot</h2></div>
     <div class="panel">
       <div class="row f">
@@ -278,6 +360,8 @@
 <nav>
   <button data-v="inbox" aria-current="true"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l1 3h6l1-3h5"/></svg></span>Inbox</button>
   <button data-v="stage" aria-current="false"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></span>Stage</button>
+  <button data-v="remote" aria-current="false"><span class="ic"><svg viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 3v6"/></svg></span>Remote</button>
+  <button data-v="susie" aria-current="false"><span class="ic"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.2A8 8 0 1121 12z"/></svg></span>Susie</button>
   <button data-v="links" aria-current="false"><span class="ic"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg></span>Links</button>
   <button data-v="pc" aria-current="false"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></span>PC</button>
   <button data-v="plan" aria-current="false"><span class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></span>Plan</button>
@@ -297,13 +381,15 @@ const api = (u, o) => {
 };
 const say = (id, t, bad) => { const e = $(id); e.textContent = t; e.className = "msg " + (bad ? "bad" : "ok"); };
 const imgUrl = n => "/shots/" + n + "?pin=" + encodeURIComponent(pinv());
-let S = null, cmds = [], rems = [], dls = [], links = [], modes = [], type = "info", cue = 0, sel = null, shotKey = "", liveT = null;
+let conT = null, S = null, cmds = [], rems = [], dls = [], links = [], modes = [], type = "info", cue = 0, sel = null, shotKey = "", liveT = null;
 
 function view(v) {
   if (v !== "pc" && liveT) $("#liveBtn").click();
+  if (v !== "pc" && conT) $("#conBtn").click();
   document.querySelectorAll(".view").forEach(e => e.hidden = e.id !== v);
   document.querySelectorAll("nav button").forEach(b => b.setAttribute("aria-current", b.dataset.v === v));
   window.scrollTo(0, 0);
+  if (v === "remote") { loadProcs().catch(() => {}); loadAway().catch(() => {}); }
 }
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => view(b.dataset.v));
 
@@ -403,10 +489,14 @@ async function load(first) {
   catch (e) { $("#live").classList.remove("on"); return; }
   $("#ip").textContent = "http://" + S.ip + ":5000";
   renderInbox(); renderAsks(); renderTiles(); renderShots();
+  say("#pcState", S.statsAge < 20000 ? "The PC script is running." : "No report from the PC. It may be off, or the script isn't running.", S.statsAge >= 20000);
   if (first) {
     rems = S.reminders; dls = S.deadlines; cmds = S.commands; links = S.links; modes = S.modes; $("#pc").value = S.pc;
     editor($("#rows"), cmds, CF); editor($("#remRows"), rems, RF, true); editor($("#dlRows"), dls, DF, false, renderDls);
     editor($("#lkRows"), links, LF, false, renderLinks); editor($("#mdRows"), modes, MF, false, renderLinks);
+    pads = S.pads; snds = S.sounds;
+    editor($("#padRows"), pads, PF, true, renderPads); editor($("#sndRows"), snds, SF, false, renderSounds);
+    renderPads(); renderSounds();
     renderRemote(); renderDls();
     const P = S.prefs;
     $("#qOn").checked = P.q_on; $("#qFrom").value = P.q_from; $("#qTo").value = P.q_to;
@@ -585,6 +675,118 @@ $("#pinOff").onclick = async () => {
   await api("/api/prefs", { ...prefsPayload(), newpin: "" });
   sessionStorage.removeItem("pin"); $("#pinOff").hidden = true; say("#setMsg", "PIN removed.");
 };
+
+async function pullLog() {
+  const r = await api("/api/pclog");
+  const box = $("#con"), end = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  box.textContent = r.text || "(nothing yet)"; if (end) box.scrollTop = box.scrollHeight;
+}
+$("#conBtn").onclick = () => {
+  if (conT) { clearInterval(conT); conT = null; $("#con").hidden = true; $("#conBtn").textContent = "Show console"; }
+  else { $("#con").hidden = false; $("#conBtn").textContent = "Hide console"; pullLog(); conT = setInterval(pullLog, 2000); }
+};
+$("#restartBtn").onclick = async () => {
+  const r = await api("/api/pcrestart", {});
+  say("#conMsg", r.msg === "Sent." ? "Restarting. Give it 5 seconds." : r.msg, r.msg !== "Sent.");
+};
+
+let pads = [], snds = [], msgs = [], tp = null, moved = 0, tdown = 0, sendT = 0;
+const acc = { x: 0, y: 0 };
+const PF = [["label", "Name"], ["osc", "/pad/1"], ["note", "MIDI note", "number"]];
+const SF = [["label", "Name"], ["path", "C:\\sounds\\hit.wav"]];
+const inp = m => fetch("/api/input", { method: "POST", body: new URLSearchParams({ msg: m, pin: pinv() }) }).catch(() => {});
+
+const touch = $("#touch");
+touch.onpointerdown = e => { touch.setPointerCapture(e.pointerId); tp = { x: e.clientX, y: e.clientY }; moved = 0; tdown = Date.now(); };
+touch.onpointermove = e => {
+  if (!tp) return;
+  const dx = e.clientX - tp.x, dy = e.clientY - tp.y;
+  tp = { x: e.clientX, y: e.clientY }; acc.x += dx * 1.8; acc.y += dy * 1.8; moved += Math.abs(dx) + Math.abs(dy);
+  const now = Date.now();
+  if (now - sendT > 25 && (Math.abs(acc.x) >= 1 || Math.abs(acc.y) >= 1)) {
+    const ix = Math.trunc(acc.x), iy = Math.trunc(acc.y);
+    acc.x -= ix; acc.y -= iy; sendT = now; inp("move " + ix + " " + iy);
+  }
+};
+touch.onpointerup = () => { if (tp && moved < 6 && Date.now() - tdown < 300) inp("click left"); tp = null; };
+document.querySelectorAll("[data-click]").forEach(b => b.onclick = () => inp("click " + b.dataset.click));
+document.querySelectorAll("[data-scroll]").forEach(b => b.onclick = () => inp("scroll " + b.dataset.scroll));
+document.querySelectorAll("[data-key]").forEach(b => b.onclick = () => inp("key " + b.dataset.key));
+[["Enter", "enter"], ["Esc", "esc"], ["Tab", "tab"], ["Backspace", "backspace"], ["Space", "space"],
+ ["Up", "up"], ["Down", "down"], ["Left", "left"], ["Right", "right"]].forEach(([l, k]) => {
+  const b = el("button", "chip", l); b.onclick = () => inp("key " + k); $("#keys").append(b);
+});
+$("#typeGo").onclick = () => { const t = $("#typeIn").value; if (t) { inp("type " + t); $("#typeIn").value = ""; } };
+
+function renderPads() {
+  const box = $("#pads"); box.replaceChildren();
+  (pads.length ? pads : Array.from({ length: 8 }, (_, i) => ({ label: String(i + 1), osc: "/pad/" + (i + 1), note: 36 + i }))).forEach(p => {
+    const b = el("button", "pad1", p.label || p.osc), note = Number(p.note) || 0, osc = p.osc || "/pad";
+    let on = false;
+    const down = () => { if (on) return; on = true; b.classList.add("on"); inp("pad " + osc + " 1 " + note); if (navigator.vibrate) navigator.vibrate(10); };
+    const up = () => { if (!on) return; on = false; b.classList.remove("on"); inp("pad " + osc + " 0 " + note); };
+    b.onpointerdown = e => { e.preventDefault(); down(); };
+    b.onpointerup = up; b.onpointerleave = up; b.onpointercancel = up;
+    box.append(b);
+  });
+}
+$("#addPad").onclick = () => { pads.push({ label: "", osc: "/pad/" + (pads.length + 1), note: 36 + pads.length }); editor($("#padRows"), pads, PF, true, renderPads); renderPads(); };
+$("#padSave").onclick = async () => { await api("/api/kv", { key: "pads", value: JSON.stringify(pads.filter(p => p.osc)) }); renderPads(); say("#padMsg", "Saved."); };
+
+function renderSounds() {
+  const g = $("#sndGrid"); g.replaceChildren();
+  const ss = snds.filter(s => s.path); $("#noSnd").hidden = ss.length > 0; $("#stopSnd").hidden = ss.length === 0;
+  ss.forEach(s => { const b = el("button", "", s.label || s.path); b.onclick = () => api("/api/command", { cmd: "play:" + s.path }); g.append(b); });
+}
+$("#addSnd").onclick = () => { snds.push({ label: "", path: "" }); editor($("#sndRows"), snds, SF, false, renderSounds); };
+$("#sndSave").onclick = async () => { await api("/api/kv", { key: "sounds", value: JSON.stringify(snds.filter(s => s.path)) }); renderSounds(); say("#sndMsg", "Saved."); };
+$("#stopSnd").onclick = () => api("/api/command", { cmd: "stopsound" });
+
+async function loadProcs() {
+  const r = await api("/api/procs"), box = $("#procs"); box.replaceChildren();
+  if (!r.list || !r.list.length) return say("#procMsg", r.err || "Couldn't read the PC's programs. Is the script running?", 1);
+  $("#procMsg").textContent = "";
+  r.list.forEach(n => {
+    const b = el("button", "chip", n);
+    b.onclick = async () => { const m = await api("/api/watchproc", { name: n }); say("#procMsg", m.msg === "Sent." ? "Watching " + n + "." : m.msg, m.msg !== "Sent."); };
+    box.append(b);
+  });
+}
+$("#procRefresh").onclick = () => loadProcs().catch(() => {});
+async function loadAway() {
+  const r = await api("/api/pcget");
+  $("#awayOn").checked = !!r.lock_away; $("#awayMin").value = r.away_min || 3;
+}
+$("#awaySave").onclick = async () => {
+  await api("/api/pcset", { name: "away_min", value: $("#awayMin").value || "3" });
+  const r = await api("/api/pcset", { name: "lock_away", value: $("#awayOn").checked ? "1" : "0" });
+  say("#awayMsg", r.msg === "Sent." ? "Saved." : r.msg, r.msg !== "Sent.");
+};
+
+try { msgs = JSON.parse(sessionStorage.getItem("chat") || "[]"); } catch (e) {}
+function renderChat() {
+  const box = $("#chat"); box.replaceChildren();
+  msgs.forEach(m => box.append(el("div", "bub " + (m.role === "user" ? "me" : "ai"), m.content)));
+  sessionStorage.setItem("chat", JSON.stringify(msgs.slice(-40)));
+  window.scrollTo(0, document.body.scrollHeight);
+}
+async function sendChat() {
+  const t = $("#chatIn").value.trim(); if (!t) return;
+  $("#chatIn").value = ""; msgs.push({ role: "user", content: t }); renderChat();
+  $("#chat").append(el("div", "bub ai", "..."));
+  try {
+    const r = await fetch("/api/chat?pin=" + encodeURIComponent(pinv()),
+      { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ messages: msgs.slice(-20) }) })
+      .then(x => x.json()).then(chk);
+    msgs.push({ role: "assistant", content: r.reply });
+    if ($("#chatSpeak").checked) api("/api/say", { text: r.reply });
+  } catch (e) { msgs.push({ role: "assistant", content: "Couldn't reach Susie." }); }
+  renderChat();
+}
+$("#chatGo").onclick = sendChat;
+$("#chatIn").onkeydown = e => { if (e.key === "Enter") sendChat(); };
+$("#chatClear").onclick = () => { msgs = []; renderChat(); };
+renderChat();
 
 function handleShare() {
   const q = new URLSearchParams(location.search).get("share");

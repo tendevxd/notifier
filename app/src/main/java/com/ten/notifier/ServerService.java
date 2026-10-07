@@ -344,6 +344,54 @@ public class ServerService extends Service {
                         prefs.edit().putString("links", arg(p, "links", "[]"))
                                 .putString("modes", arg(p, "modes", "[]")).apply();
                         return json("{\"ok\":true}");
+                    case "/api/pclog": {
+                        String t = fetchPc("/log");
+                        JSONObject r = new JSONObject();
+                        r.put("text", t == null ? "Can't reach the PC script. Is it running?" : t);
+                        return json(r.toString());
+                    }
+                    case "/api/pcrestart": {
+                        JSONObject r = new JSONObject();
+                        r.put("msg", post("/restart", "go=1"));
+                        return json(r.toString());
+                    }
+                    case "/api/input":
+                        sendUdp(arg(p, "msg", ""));
+                        return json("{\"ok\":true}");
+                    case "/api/kv": {
+                        String k = arg(p, "key", "");
+                        if (!k.equals("sounds") && !k.equals("pads")) return json("{\"ok\":false}");
+                        new JSONArray(arg(p, "value", "[]"));
+                        prefs.edit().putString("kv_" + k, arg(p, "value", "[]")).apply();
+                        return json("{\"ok\":true}");
+                    }
+                    case "/api/procs": {
+                        String t = fetchPc("/procs");
+                        return json(t == null ? "{\"list\":[]}" : t);
+                    }
+                    case "/api/watchproc": {
+                        JSONObject r = new JSONObject();
+                        r.put("msg", post("/watch", "name=" + URLEncoder.encode(arg(p, "name", ""), "UTF-8")));
+                        return json(r.toString());
+                    }
+                    case "/api/pcget": {
+                        String t = fetchPc("/settings");
+                        return json(t == null ? "{}" : t);
+                    }
+                    case "/api/pcset": {
+                        JSONObject r = new JSONObject();
+                        r.put("msg", post("/set", "name=" + URLEncoder.encode(arg(p, "name", ""), "UTF-8")
+                                + "&value=" + URLEncoder.encode(arg(p, "value", ""), "UTF-8")));
+                        return json(r.toString());
+                    }
+                    case "/api/chat": {
+                        String body = files.get("postData");
+                        String t = body == null ? null : chatPc(body);
+                        return json(t == null ? "{\"reply\":\"Can't reach the PC script.\"}" : t);
+                    }
+                    case "/api/say":
+                        if (ttsReady) say(arg(p, "text", ""), arg(p, "lang", ""));
+                        return json("{\"ok\":true}");
                     case "/api/clear":
                         prefs.edit().putString("history", "[]").apply();
                         return json("{\"ok\":true}");
@@ -477,6 +525,7 @@ public class ServerService extends Service {
     }
 
     Thread udpThread;
+    DatagramSocket udpOut;
     volatile JSONObject stats = new JSONObject();
 
     BroadcastReceiver battery = new BroadcastReceiver() {
@@ -613,6 +662,9 @@ public class ServerService extends Service {
             for (int i = 0; i < fs.length && i < 8; i++) sh.put(fs[i].getName());
         }
         o.put("shots", sh);
+        for (String k : new String[]{"sounds", "pads"}) {
+            o.put(k, new JSONArray(prefs.getString("kv_" + k, "[]")));
+        }
         o.put("stats", stats);
         o.put("statsAge", System.currentTimeMillis() - stats.optLong("t", 0));
         JSONObject pf = new JSONObject();
@@ -626,6 +678,81 @@ public class ServerService extends Service {
         o.put("pc", prefs.getString("pc", ""));
         o.put("commands", new JSONArray(prefs.getString("commands", "[]")));
         return o;
+    }
+
+    String pcHost() {
+        String pc = prefs.getString("pc", "");
+        if (pc.isEmpty()) {
+            pc = discoverPc();
+            if (!pc.isEmpty()) prefs.edit().putString("pc", pc).apply();
+        }
+        return pc.isEmpty() ? null : pc.split(":")[0];
+    }
+
+    void sendUdp(String msg) {
+        try {
+            String host = pcHost();
+            if (host == null || msg.isEmpty()) return;
+            if (udpOut == null) udpOut = new DatagramSocket();
+            byte[] b = msg.getBytes("UTF-8");
+            udpOut.send(new DatagramPacket(b, b.length, InetAddress.getByName(host), 5003));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    String chatPc(String body) {
+        String pc = prefs.getString("pc", "");
+        if (pc.isEmpty()) {
+            pc = discoverPc();
+            if (pc.isEmpty()) return null;
+            prefs.edit().putString("pc", pc).apply();
+        }
+        try {
+            HttpURLConnection c = (HttpURLConnection) new URL("http://" + pc + "/chat").openConnection();
+            c.setConnectTimeout(3000);
+            c.setReadTimeout(180000);
+            c.setRequestMethod("POST");
+            c.setDoOutput(true);
+            c.setRequestProperty("Content-Type", "text/plain");
+            OutputStream os = c.getOutputStream();
+            os.write(body.getBytes("UTF-8"));
+            os.close();
+            InputStream in = c.getInputStream();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buf = new byte[4096];
+            int n;
+            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+            in.close();
+            c.disconnect();
+            return out.toString("UTF-8");
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    String fetchPc(String path) {
+        String pc = prefs.getString("pc", "");
+        if (pc.isEmpty()) {
+            pc = discoverPc();
+            if (pc.isEmpty()) return null;
+            prefs.edit().putString("pc", pc).apply();
+        }
+        try {
+            HttpURLConnection c = (HttpURLConnection) new URL("http://" + pc + path).openConnection();
+            c.setConnectTimeout(3000);
+            c.setReadTimeout(5000);
+            InputStream in = c.getInputStream();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buf = new byte[4096];
+            int n;
+            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+            in.close();
+            c.disconnect();
+            return out.toString("UTF-8");
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     String sendCommand(String cmd) {
