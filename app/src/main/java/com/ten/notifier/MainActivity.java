@@ -2,8 +2,11 @@ package com.ten.notifier;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
@@ -12,6 +15,7 @@ import android.webkit.WebViewClient;
 public class MainActivity extends Activity {
     static final String URL = "http://127.0.0.1:5000/";
     WebView web;
+    ValueCallback<Uri[]> filePath;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -32,8 +36,31 @@ public class MainActivity extends Activity {
                 }
             }
         });
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onShowFileChooser(WebView w, ValueCallback<Uri[]> cb, FileChooserParams params) {
+                if (filePath != null) filePath.onReceiveValue(null);
+                filePath = cb;
+                try {
+                    startActivityForResult(params.createIntent(), 7);
+                } catch (Exception e) {
+                    filePath = null;
+                    return false;
+                }
+                return true;
+            }
+        });
         setContentView(web);
         web.loadUrl(URL);
+    }
+
+    @Override
+    protected void onActivityResult(int req, int res, Intent data) {
+        if (req == 7 && filePath != null) {
+            filePath.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(res, data));
+            filePath = null;
+        }
+        super.onActivityResult(req, res, data);
     }
 
     @Override

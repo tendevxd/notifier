@@ -5,7 +5,12 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
 import android.hardware.camera2.CameraCharacteristics;
@@ -38,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -71,11 +77,19 @@ public class ServerService extends Service {
         wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "notifier:server");
         wl.acquire();
         makeChannels();
+        IntentFilter bf = new IntentFilter(Intent.ACTION_BATTERY_LOW);
+        bf.addAction(Intent.ACTION_BATTERY_OKAY);
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(battery, bf, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(battery, bf);
+        }
     }
 
     void makeChannels() {
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.createNotificationChannel(new NotificationChannel(FG, "Server", NotificationManager.IMPORTANCE_LOW));
+        nm.createNotificationChannel(new NotificationChannel("quiet", "Quiet", NotificationManager.IMPORTANCE_LOW));
         channel(nm, "info", "Info", Settings.System.DEFAULT_NOTIFICATION_URI,
                 AudioAttributes.USAGE_NOTIFICATION, new long[]{0, 200});
         channel(nm, "warn", "Warning", Settings.System.DEFAULT_RINGTONE_URI,
@@ -147,15 +161,21 @@ public class ServerService extends Service {
         public Response serve(IHTTPSession s) {
             try {
                 String uri = s.getUri();
-                if (s.getMethod() == Method.POST) s.parseBody(new HashMap<String, String>());
+                Map<String, String> files = new HashMap<String, String>();
+                if (s.getMethod() == Method.POST) s.parseBody(files);
                 Map<String, String> p = s.getParms();
+                String pin = prefs.getString("pin", "");
+                if (uri.startsWith("/api/") && !uri.equals("/api/unlock") && !pin.isEmpty()
+                        && !"127.0.0.1".equals(s.getRemoteIpAddress()) && !pin.equals(p.get("pin"))) {
+                    return json("{\"locked\":true}");
+                }
 
                 switch (uri) {
                     case "/":
                         return page();
                     case "/notify":
                         show(arg(p, "title", "Alert"), arg(p, "text", ""),
-                                "1".equals(p.get("speak")), arg(p, "type", "info"));
+                                "1".equals(p.get("speak")), arg(p, "type", "info"), arg(p, "lang", ""));
                         return json("{\"ok\":true}");
                     case "/api/state":
                         return json(state().toString());
@@ -215,6 +235,52 @@ public class ServerService extends Service {
                         new JSONArray(arg(p, "list", "[]"));
                         prefs.edit().putString("deadlines", arg(p, "list", "[]")).apply();
                         return json("{\"ok\":true}");
+                    case "/api/unlock": {
+                        JSONObject r = new JSONObject();
+                        r.put("set", !pin.isEmpty());
+                        r.put("ok", pin.isEmpty() || pin.equals(p.get("pin")));
+                        return json(r.toString());
+                    }
+                    case "/api/prefs": {
+                        prefs.edit()
+                                .putBoolean("q_on", "1".equals(p.get("q_on")))
+                                .putString("q_from", arg(p, "q_from", "23:00"))
+                                .putString("q_to", arg(p, "q_to", "07:00"))
+                                .putString("tts_lang", arg(p, "tts_lang", ""))
+                                .putFloat("tts_rate", Float.parseFloat(arg(p, "tts_rate", "1")))
+                                .apply();
+                        if (p.containsKey("newpin")) prefs.edit().putString("pin", p.get("newpin")).apply();
+                        return json("{\"ok\":true}");
+                    }
+                    case "/stats": {
+                        JSONObject st = new JSONObject();
+                        for (Map.Entry<String, String> e : p.entrySet()) st.put(e.getKey(), e.getValue());
+                        st.put("t", System.currentTimeMillis());
+                        stats = st;
+                        return json("{\"ok\":true}");
+                    }
+                    case "/api/photo": {
+                        String b64 = files.get("postData");
+                        JSONObject r = new JSONObject();
+                        if (b64 == null) {
+                            r.put("msg", "No photo received.");
+                        } else {
+                            r.put("msg", post("/photo?name=" + URLEncoder.encode(arg(p, "name", "photo.jpg"), "UTF-8"), b64));
+                        }
+                        return json(r.toString());
+                    }
+                    case "/api/clip": {
+                        JSONObject r = new JSONObject();
+                        r.put("msg", post("/clip", "text=" + URLEncoder.encode(arg(p, "text", ""), "UTF-8")));
+                        return json(r.toString());
+                    }
+                    case "/clip": {
+                        final String t = arg(p, "text", "");
+                        handler.post(() -> ((ClipboardManager) getSystemService(CLIPBOARD_SERVICE))
+                                .setPrimaryClip(ClipData.newPlainText("Notifier", t)));
+                        show("Clipboard", "Copied from your PC: " + (t.length() > 80 ? t.substring(0, 80) + "..." : t), false, "info");
+                        return json("{\"ok\":true}");
+                    }
                     case "/api/clear":
                         prefs.edit().putString("history", "[]").apply();
                         return json("{\"ok\":true}");
@@ -228,11 +294,17 @@ public class ServerService extends Service {
     }
 
     void show(String title, String text, boolean speak, String type) {
+        show(title, text, speak, type, null);
+    }
+
+    void show(String title, String text, boolean speak, String type, String lang) {
         if (!type.equals("warn") && !type.equals("error")) type = "info";
+        boolean quiet = !type.equals("error") && quietNow();
+        String chan = quiet ? "quiet" : type;
 
         PendingIntent pi = PendingIntent.getActivity(this, 0,
                 new Intent(this, MainActivity.class), PendingIntent.FLAG_IMMUTABLE);
-        Notification n = new Notification.Builder(this, type)
+        Notification n = new Notification.Builder(this, chan)
                 .setContentTitle(title)
                 .setContentText(text)
                 .setStyle(new Notification.BigTextStyle().bigText(text))
@@ -243,7 +315,7 @@ public class ServerService extends Service {
         getSystemService(NotificationManager.class).notify(nid++, n);
 
         addHistory(title, text, type);
-        if (speak && ttsReady) tts.speak(text, TextToSpeech.QUEUE_ADD, null, null);
+        if (speak && ttsReady && !quiet) say(text, lang);
         if (type.equals("error")) flash();
     }
 
@@ -337,6 +409,15 @@ public class ServerService extends Service {
     }
 
     Thread udpThread;
+    volatile JSONObject stats = new JSONObject();
+
+    BroadcastReceiver battery = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context c, Intent i) {
+            final String name = Intent.ACTION_BATTERY_LOW.equals(i.getAction()) ? "battery_low" : "battery_ok";
+            new Thread(() -> post("/event", "name=" + name)).start();
+        }
+    };
 
     void startDiscovery() {
         udpThread = new Thread(() -> {
@@ -378,6 +459,31 @@ public class ServerService extends Service {
         return "";
     }
 
+    void say(String text, String lang) {
+        String l = (lang == null || lang.isEmpty()) ? prefs.getString("tts_lang", "") : lang;
+        tts.setLanguage(l.isEmpty() ? Locale.getDefault() : new Locale(l));
+        tts.setSpeechRate(prefs.getFloat("tts_rate", 1.0f));
+        tts.speak(text, TextToSpeech.QUEUE_ADD, null, null);
+    }
+
+    boolean quietNow() {
+        if (!prefs.getBoolean("q_on", false)) return false;
+        try {
+            int f = mins(prefs.getString("q_from", "23:00"));
+            int t = mins(prefs.getString("q_to", "07:00"));
+            Calendar c = Calendar.getInstance();
+            int n = c.get(Calendar.HOUR_OF_DAY) * 60 + c.get(Calendar.MINUTE);
+            return f <= t ? (n >= f && n < t) : (n >= f || n < t);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    int mins(String s) {
+        String[] p = s.split(":");
+        return Integer.parseInt(p[0]) * 60 + Integer.parseInt(p[1]);
+    }
+
     String ip() {
         int ip = ((WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE))
                 .getConnectionInfo().getIpAddress();
@@ -393,6 +499,16 @@ public class ServerService extends Service {
         JSONArray ak = new JSONArray();
         for (JSONObject a : asks.values()) ak.put(a);
         o.put("asks", ak);
+        o.put("stats", stats);
+        o.put("statsAge", System.currentTimeMillis() - stats.optLong("t", 0));
+        JSONObject pf = new JSONObject();
+        pf.put("q_on", prefs.getBoolean("q_on", false));
+        pf.put("q_from", prefs.getString("q_from", "23:00"));
+        pf.put("q_to", prefs.getString("q_to", "07:00"));
+        pf.put("tts_lang", prefs.getString("tts_lang", ""));
+        pf.put("tts_rate", (double) prefs.getFloat("tts_rate", 1.0f));
+        pf.put("pin", !prefs.getString("pin", "").isEmpty());
+        o.put("prefs", pf);
         o.put("pc", prefs.getString("pc", ""));
         o.put("commands", new JSONArray(prefs.getString("commands", "[]")));
         return o;
@@ -424,7 +540,7 @@ public class ServerService extends Service {
         try {
             HttpURLConnection c = (HttpURLConnection) new URL("http://" + pc + path).openConnection();
             c.setConnectTimeout(3000);
-            c.setReadTimeout(3000);
+            c.setReadTimeout(15000);
             c.setRequestMethod("POST");
             c.setDoOutput(true);
             c.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
@@ -446,6 +562,11 @@ public class ServerService extends Service {
 
     @Override
     public void onDestroy() {
+        try {
+            unregisterReceiver(battery);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         if (server != null) server.stop();
         if (tts != null) tts.shutdown();
         if (wl != null && wl.isHeld()) wl.release();

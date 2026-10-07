@@ -65,11 +65,27 @@
   .dl:first-child { border-top:0; } .dl b { font-size:2rem; letter-spacing:-.04em; min-width:3.2rem; }
   nav { position:fixed; left:0; right:0; bottom:0; display:flex; background:#050507ee; border-top:1px solid var(--line);
         padding-bottom:env(safe-area-inset-bottom); backdrop-filter:blur(12px); }
-  nav button { flex:1; background:none; border:0; color:var(--mute); padding:15px 0; font-size:.85rem; font-weight:600; }
+  nav button { flex:1; background:none; border:0; color:var(--mute); padding:15px 0; font-size:.8rem; font-weight:600; }
   nav button[aria-current="true"] { color:var(--ink); box-shadow:inset 0 2px 0 var(--acc); }
+  [hidden] { display:none !important; }
+  select { width:100%; font:inherit; color:var(--ink); background:var(--s2); color-scheme:dark; border:1px solid var(--line); border-radius:12px; padding:10px 12px; }
+  input[type=file] { color:var(--mute); width:100%; }
+  #lock { position:fixed; inset:0; z-index:9; background:#000; display:flex; flex-direction:column; justify-content:center; gap:12px; padding:32px; }
+  .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .tiles .empty { grid-column:1/-1; margin:0; }
+  .tile { background:var(--s2); border-radius:12px; padding:10px 4px; text-align:center; }
+  .tile b { display:block; font-size:1.3rem; letter-spacing:-.03em; } .tile span { color:var(--mute); font-size:.78rem; }
+  .tile.hot b { color:var(--bad); }
 </style>
 </head>
 <body>
+<div id="lock" hidden>
+  <h1>Prompt desk</h1>
+  <p class="hint">Enter your PIN.</p>
+  <input id="pinIn" type="password" inputmode="numeric" placeholder="PIN">
+  <button class="btn" id="unlock">Unlock</button>
+  <p class="msg" id="lockMsg"></p>
+</div>
 <main>
   <header>
     <div>
@@ -103,6 +119,10 @@
 
   <section class="view" id="stage" hidden>
     <div class="panel">
+      <h2>Your PC</h2>
+      <div class="tiles" id="tiles"></div>
+    </div>
+    <div class="panel">
       <p class="stby">Standing by</p>
       <h2 id="cueNext"></h2>
       <button class="go" id="go">GO</button>
@@ -121,6 +141,12 @@
       <label>XY pad</label>
       <div class="pad" id="pad"><div class="dot" id="dot"></div></div>
     </div>
+    <div class="panel">
+      <h2>Phone sensors</h2>
+      <p class="hint">Sends tilt and shake to your PC while the app is open.</p>
+      <p><b id="tiltOut">Off</b></p>
+      <button class="btn ghost" id="sensBtn">Start sending</button>
+    </div>
   </section>
 
   <section class="view" id="focus" hidden>
@@ -132,6 +158,22 @@
       <div class="row"><input id="fMin" type="number" min="1" value="30"><button class="btn" id="fGo">Start timer</button></div>
     </div>
     <p class="msg" id="fMsg"></p>
+  </section>
+
+  <section class="view" id="share" hidden>
+    <h2>Share</h2>
+    <p class="hint">Move things from the phone to your PC.</p>
+    <div class="panel">
+      <h2>Photo</h2>
+      <p class="hint">Saved in the Phone_Photos folder next to pc_remote.py.</p>
+      <input id="photo" type="file" accept="image/*">
+    </div>
+    <div class="panel">
+      <h2>Text for the PC clipboard</h2>
+      <div class="f"><textarea id="clipText" placeholder="Paste a link or some text"></textarea></div>
+      <button class="btn" id="clipSend">Send to PC</button>
+    </div>
+    <p class="msg" id="shMsg"></p>
   </section>
 
   <section class="view" id="plan" hidden>
@@ -158,6 +200,19 @@
       <div id="rows"></div>
       <button class="btn ghost" id="addRow">Add button</button>
     </div>
+    <div class="panel">
+      <h2>Voice, quiet hours and PIN</h2>
+      <div class="row f">
+        <div><label for="vLang">Voice language</label>
+          <select id="vLang"><option value="">Phone default</option><option value="en">English</option><option value="ar">Arabic</option></select></div>
+        <div><label for="vRate">Speed</label><input id="vRate" type="number" min="0.5" max="2" step="0.1" value="1"></div>
+      </div>
+      <label class="check f"><input id="qOn" type="checkbox"> Quiet hours: no sound or speech, errors still ring</label>
+      <div class="row f"><input id="qFrom" type="time" value="23:00"><input id="qTo" type="time" value="07:00"></div>
+      <div class="f"><label for="pinNew">PIN lock for the app and the PC page</label>
+        <input id="pinNew" type="password" inputmode="numeric" placeholder="New PIN"></div>
+      <button class="btn ghost" id="pinOff" hidden>Remove PIN</button>
+    </div>
     <button class="btn" id="setSave">Save setup</button>
     <p class="msg" id="setMsg"></p>
   </section>
@@ -167,6 +222,7 @@
   <button data-v="inbox" aria-current="true">Inbox</button>
   <button data-v="stage" aria-current="false">Stage</button>
   <button data-v="focus" aria-current="false">Focus</button>
+  <button data-v="share" aria-current="false">Share</button>
   <button data-v="plan" aria-current="false">Plan</button>
   <button data-v="setup" aria-current="false">Setup</button>
 </nav>
@@ -174,7 +230,14 @@
 <script>
 const $ = s => document.querySelector(s);
 const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x) e.textContent = x; return e; };
-const api = (u, o) => fetch(u, o ? { method: "POST", body: new URLSearchParams(o) } : {}).then(r => r.json());
+const pinv = () => sessionStorage.getItem("pin") || "";
+const chk = r => { if (r.locked) { $("#lock").hidden = false; throw new Error("locked"); } return r; };
+const api = (u, o) => {
+  const pin = pinv();
+  const req = o ? fetch(u, { method: "POST", body: new URLSearchParams({ ...o, pin }) })
+                : fetch(u + (u.includes("?") ? "&" : "?") + "pin=" + encodeURIComponent(pin));
+  return req.then(r => r.json()).then(chk);
+};
 const say = (id, t, bad) => { const e = $(id); e.textContent = t; e.className = "msg " + (bad ? "bad" : "ok"); };
 let S = null, cmds = [], rems = [], dls = [], type = "info", cue = 0;
 
@@ -254,11 +317,14 @@ async function load(first) {
     $("#live").classList.add("on");
   } catch (e) { $("#live").classList.remove("on"); return; }
   $("#ip").textContent = "http://" + S.ip + ":5000";
-  renderInbox(); renderAsks();
+  renderInbox(); renderAsks(); renderTiles();
   if (first) {
     rems = S.reminders; dls = S.deadlines; cmds = S.commands; $("#pc").value = S.pc;
     editor($("#rows"), cmds, CF); editor($("#remRows"), rems, RF, true); editor($("#dlRows"), dls, DF);
     renderRemote(); renderDls();
+    const P = S.prefs;
+    $("#qOn").checked = P.q_on; $("#qFrom").value = P.q_from; $("#qTo").value = P.q_to;
+    $("#vLang").value = P.tts_lang; $("#vRate").value = P.tts_rate; $("#pinOff").hidden = !P.pin;
   }
 }
 
@@ -344,11 +410,83 @@ $("#addRow").onclick = () => { cmds.push({ label: "", cmd: "" }); editor($("#row
 $("#setSave").onclick = async () => {
   cmds = cmds.filter(c => c.cmd.trim());
   await api("/api/settings", { pc: $("#pc").value, commands: JSON.stringify(cmds) });
+  const np = $("#pinNew").value.trim();
+  await api("/api/prefs", np ? { ...prefsPayload(), newpin: np } : prefsPayload());
+  if (np) { sessionStorage.setItem("pin", np); $("#pinNew").value = ""; $("#pinOff").hidden = false; }
   editor($("#rows"), cmds, CF); renderRemote(); say("#setMsg", "Saved.");
 };
 
-load(true);
-setInterval(() => { if (!$("#inbox").hidden) load(false); }, 3000);
+const prefsPayload = () => ({
+  q_on: $("#qOn").checked ? "1" : "0", q_from: $("#qFrom").value || "23:00", q_to: $("#qTo").value || "07:00",
+  tts_lang: $("#vLang").value, tts_rate: $("#vRate").value || "1" });
+$("#pinOff").onclick = async () => {
+  await api("/api/prefs", { ...prefsPayload(), newpin: "" });
+  sessionStorage.removeItem("pin"); $("#pinOff").hidden = true; say("#setMsg", "PIN removed.");
+};
+
+function renderTiles() {
+  const box = $("#tiles"); box.replaceChildren();
+  if (!(S.statsAge < 20000)) { box.append(el("p", "empty", "No data. Run pc_remote.py (needs psutil).")); return; }
+  [["cpu", "CPU", "%"], ["ram", "RAM", "%"], ["disk", "Disk", "%"], ["gpu", "GPU", "\u00b0"]].forEach(([k, l, u]) => {
+    const v = S.stats[k]; if (v === undefined) return;
+    const t = el("div", "tile" + (Number(v) >= (k === "gpu" ? 85 : 90) ? " hot" : ""));
+    t.append(el("b", "", v + u), el("span", "", l)); box.append(t);
+  });
+}
+
+let sens = false, lastShake = 0;
+function onTilt(e) {
+  const x = Math.max(-1, Math.min(1, (e.gamma || 0) / 90)), y = Math.max(-1, Math.min(1, (e.beta || 0) / 90));
+  $("#tiltOut").textContent = "Tilt " + x.toFixed(2) + ", " + y.toFixed(2);
+  sendVal("tilt", x.toFixed(3) + "," + y.toFixed(3));
+}
+function onShake(e) {
+  const a = e.accelerationIncludingGravity; if (!a) return;
+  if (Math.hypot(a.x || 0, a.y || 0, a.z || 0) > 25 && Date.now() - lastShake > 600) {
+    lastShake = Date.now(); $("#tiltOut").textContent = "Shake!"; sendVal("shake", "1", true);
+  }
+}
+$("#sensBtn").onclick = () => {
+  sens = !sens;
+  $("#sensBtn").textContent = sens ? "Stop sending" : "Start sending";
+  if (!sens) $("#tiltOut").textContent = "Off";
+  const f = sens ? addEventListener : removeEventListener;
+  f("deviceorientation", onTilt); f("devicemotion", onShake);
+};
+
+$("#photo").onchange = async () => {
+  const f = $("#photo").files[0]; if (!f) return;
+  say("#shMsg", "Sending...");
+  try {
+    const bmp = await createImageBitmap(f);
+    const k = Math.min(1, 2048 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    const b64 = c.toDataURL("image/jpeg", 0.9).split(",")[1];
+    const name = (f.name || "photo").replace(/\.[^.]+$/, "") + ".jpg";
+    const r = await fetch("/api/photo?pin=" + encodeURIComponent(pinv()) + "&name=" + encodeURIComponent(name),
+      { method: "POST", headers: { "Content-Type": "text/plain" }, body: b64 }).then(x => x.json()).then(chk);
+    say("#shMsg", r.msg, r.msg !== "Sent.");
+  } catch (e) { say("#shMsg", "Couldn't send that photo.", 1); }
+  $("#photo").value = "";
+};
+$("#clipSend").onclick = async () => {
+  const text = $("#clipText").value; if (!text) return say("#shMsg", "Type or paste something first.", 1);
+  const r = await api("/api/clip", { text }); say("#shMsg", r.msg, r.msg !== "Sent.");
+};
+
+$("#unlock").onclick = async () => {
+  sessionStorage.setItem("pin", $("#pinIn").value);
+  const r = await api("/api/unlock");
+  if (r.ok) { $("#lock").hidden = true; $("#pinIn").value = ""; $("#lockMsg").textContent = ""; load(true); }
+  else say("#lockMsg", "Wrong PIN.", 1);
+};
+(async () => {
+  const r = await api("/api/unlock");
+  if (r.ok) load(true); else $("#lock").hidden = false;
+})();
+setInterval(() => { if (!$("#inbox").hidden || !$("#stage").hidden) load(false); }, 3000);
 </script>
 </body>
 </html>
