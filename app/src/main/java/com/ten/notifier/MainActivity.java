@@ -2,9 +2,11 @@ package com.ten.notifier;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -26,9 +28,24 @@ public class MainActivity extends Activity {
             requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 1);
         }
         startForegroundService(new Intent(this, ServerService.class));
+        if (getSharedPreferences("notifier", MODE_PRIVATE).getBoolean("voice_on", false)
+                && checkSelfPermission("android.permission.RECORD_AUDIO") == PackageManager.PERMISSION_GRANTED) {
+            startForegroundService(new Intent(this, VoiceService.class));
+        }
 
         web = new WebView(this);
         web.getSettings().setJavaScriptEnabled(true);
+        web.addJavascriptInterface(new Object() {
+            @JavascriptInterface
+            public boolean hasMic() {
+                return checkSelfPermission("android.permission.RECORD_AUDIO") == PackageManager.PERMISSION_GRANTED;
+            }
+
+            @JavascriptInterface
+            public void askMic() {
+                runOnUiThread(() -> requestPermissions(new String[]{"android.permission.RECORD_AUDIO"}, 2));
+            }
+        }, "Android");
         web.setWebViewClient(new WebViewClient() {
             @Override
             public void onReceivedError(WebView v, WebResourceRequest r, WebResourceError e) {

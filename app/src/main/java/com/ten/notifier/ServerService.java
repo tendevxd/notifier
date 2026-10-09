@@ -13,10 +13,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
 import android.media.AudioAttributes;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.os.Build;
@@ -136,6 +138,7 @@ public class ServerService extends Service {
             }
         }
         if (udpThread == null) startDiscovery();
+        if (presenceThread == null) startPresence();
         scheduleReminder();
         return START_STICKY;
     }
@@ -360,7 +363,7 @@ public class ServerService extends Service {
                         return json("{\"ok\":true}");
                     case "/api/kv": {
                         String k = arg(p, "key", "");
-                        if (!k.equals("sounds") && !k.equals("pads")) return json("{\"ok\":false}");
+                        if (!k.equals("sounds") && !k.equals("pads") && !k.equals("voice")) return json("{\"ok\":false}");
                         new JSONArray(arg(p, "value", "[]"));
                         prefs.edit().putString("kv_" + k, arg(p, "value", "[]")).apply();
                         return json("{\"ok\":true}");
@@ -395,6 +398,39 @@ public class ServerService extends Service {
                     case "/api/media": {
                         String t = fetchPc("/media");
                         return json(t == null ? "{}" : t);
+                    }
+                    case "/cue":
+                        playCue(arg(p, "name", "meet"));
+                        return json("{\"ok\":true}");
+                    case "/api/cue": {
+                        String nm = arg(p, "name", "meet");
+                        lastCue.remove(nm);
+                        JSONObject r = new JSONObject();
+                        int rid = getResources().getIdentifier(nm, "raw", getPackageName());
+                        r.put("msg", rid == 0 ? "No sound found. Put " + nm + ".mp3 in app/src/main/res/raw and rebuild." : "Playing.");
+                        playCue(nm);
+                        return json(r.toString());
+                    }
+                    case "/voice":
+                        addHistory("Voice", arg(p, "text", ""), "info", null);
+                        return json("{\"ok\":true}");
+                    case "/api/voiceset": {
+                        boolean on = "1".equals(p.get("on"));
+                        JSONObject r = new JSONObject();
+                        if (on && checkSelfPermission("android.permission.RECORD_AUDIO") != PackageManager.PERMISSION_GRANTED) {
+                            r.put("msg", "Allow the microphone first. Open the app on the phone.");
+                            return json(r.toString());
+                        }
+                        prefs.edit().putBoolean("voice_on", on).putString("voice_lang", arg(p, "lang", "en-US")).apply();
+                        try {
+                            Intent vi = new Intent(ServerService.this, VoiceService.class);
+                            stopService(vi);
+                            if (on) startForegroundService(vi);
+                            r.put("msg", "ok");
+                        } catch (Exception e) {
+                            r.put("msg", "Open the app on the phone to turn this on.");
+                        }
+                        return json(r.toString());
                     }
                     case "/api/clear":
                         prefs.edit().putString("history", "[]").apply();
@@ -530,6 +566,9 @@ public class ServerService extends Service {
 
     Thread udpThread;
     DatagramSocket udpOut;
+    Thread presenceThread;
+    volatile boolean pcOnline = false;
+    HashMap<String, Long> lastCue = new HashMap<>();
     volatile JSONObject stats = new JSONObject();
 
     BroadcastReceiver battery = new BroadcastReceiver() {
@@ -575,7 +614,7 @@ public class ServerService extends Service {
             String[] t = new String(in.getData(), 0, in.getLength()).trim().split(" ");
             if (t[0].equals("PC")) return in.getAddress().getHostAddress() + ":" + t[1];
         } catch (Exception e) {
-            e.printStackTrace();
+            // no answer: the PC is not here
         }
         return "";
     }
@@ -666,9 +705,12 @@ public class ServerService extends Service {
             for (int i = 0; i < fs.length && i < 8; i++) sh.put(fs[i].getName());
         }
         o.put("shots", sh);
-        for (String k : new String[]{"sounds", "pads"}) {
+        for (String k : new String[]{"sounds", "pads", "voice"}) {
             o.put(k, new JSONArray(prefs.getString("kv_" + k, "[]")));
         }
+        o.put("pcOnline", pcOnline);
+        o.put("voiceOn", prefs.getBoolean("voice_on", false));
+        o.put("voiceLang", prefs.getString("voice_lang", "en-US"));
         o.put("stats", stats);
         o.put("statsAge", System.currentTimeMillis() - stats.optLong("t", 0));
         JSONObject pf = new JSONObject();
@@ -682,6 +724,57 @@ public class ServerService extends Service {
         o.put("pc", prefs.getString("pc", ""));
         o.put("commands", new JSONArray(prefs.getString("commands", "[]")));
         return o;
+    }
+
+    void startPresence() {
+        presenceThread = new Thread(() -> {
+            int misses = 0;
+            while (true) {
+                try {
+                    String found = discoverPc();
+                    if (!found.isEmpty()) {
+                        misses = 0;
+                        if (!found.equals(prefs.getString("pc", ""))) prefs.edit().putString("pc", found).apply();
+                        if (!pcOnline) {
+                            pcOnline = true;
+                            playCue("meet");
+                            post("/cue?name=meet", "go=1");
+                        }
+                    } else if (++misses >= 2 && pcOnline) {
+                        pcOnline = false;
+                        playCue("leave");
+                    }
+                    Thread.sleep(6000);
+                } catch (Exception e) {
+                    try {
+                        Thread.sleep(6000);
+                    } catch (Exception ignored) {
+                        // keep scanning
+                    }
+                }
+            }
+        });
+        presenceThread.start();
+    }
+
+    void playCue(final String name) {
+        long now = System.currentTimeMillis();
+        Long last = lastCue.get(name);
+        if (last != null && now - last < 15000) return;
+        lastCue.put(name, now);
+        if (quietNow()) return;
+        handler.post(() -> {
+            try {
+                int id = getResources().getIdentifier(name, "raw", getPackageName());
+                if (id == 0) return;
+                MediaPlayer mp = MediaPlayer.create(ServerService.this, id);
+                if (mp == null) return;
+                mp.setOnCompletionListener(MediaPlayer::release);
+                mp.start();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     String pcHost() {

@@ -108,6 +108,7 @@
   .bub { max-width:86%; padding:10px 14px; border-radius:18px; margin:0 0 10px; word-break:break-word; white-space:pre-wrap; }
   .bub.me { margin-left:auto; background:var(--grad); } .bub.ai { background:#ffffff10; border:1px solid var(--line); }
   .btn.sm { width:auto; padding:12px 18px; }
+  .pills { display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
 </style>
 </head>
 <body>
@@ -124,7 +125,7 @@
       <h1>Prompt desk</h1>
       <p class="who">Ten · on your PC: <span id="ip">…</span></p>
     </div>
-    <div class="live" id="live"><i></i>Phone</div>
+    <div class="pills"><div class="live" id="live"><i></i>Phone</div><div class="live" id="pcLive"><i></i>PC</div></div>
   </header>
 
   <section class="view" id="inbox">
@@ -371,6 +372,24 @@
       <div id="rows"></div>
       <button class="btn ghost" id="addRow">Add button</button>
     </div>
+    <div class="sec"><h2>Voice commands</h2></div>
+    <div class="panel">
+      <label class="check f"><input id="voiceOn" type="checkbox"> Always listening for my phrases</label>
+      <div class="f"><label for="voiceLang">Language</label>
+        <select id="voiceLang"><option value="en-US">English</option><option value="ar-IQ">Arabic (Iraq)</option><option value="ar-SA">Arabic</option></select></div>
+      <p class="hint">Say a phrase exactly as written and its action runs. Actions are the same commands as the Stage buttons. Start one with input: to press keys, like input:media next.</p>
+      <div class="chips" id="vpre"></div>
+      <div id="vRows"></div>
+      <button class="btn ghost" id="addVoice">Add phrase</button>
+      <button class="btn" id="voiceSave" style="margin-top:10px">Save and apply</button>
+      <p class="msg" id="voiceMsg"></p>
+    </div>
+    <div class="sec"><h2>Connection sound</h2></div>
+    <div class="panel">
+      <p class="hint">Plays on the phone and the PC when they find each other. Phone: put meet.mp3 (and optionally leave.mp3) in app/src/main/res/raw in the repo. PC: put meet.wav, meet.mp3 or meet.ogg next to pc_remote.py.</p>
+      <div class="row"><button class="btn ghost" id="cuePhone">Test on phone</button><button class="btn ghost" id="cuePc">Test on PC</button></div>
+      <p class="msg" id="cueMsg"></p>
+    </div>
     <div class="panel">
       <h2>Voice, quiet hours and PIN</h2>
       <div class="row f" style="margin-top:12px">
@@ -520,13 +539,15 @@ async function load(first) {
   try { S = await api("/api/state"); $("#live").classList.add("on"); }
   catch (e) { $("#live").classList.remove("on"); return; }
   $("#ip").textContent = "http://" + S.ip + ":5000";
+  $("#pcLive").classList.toggle("on", !!S.pcOnline);
   renderInbox(); renderAsks(); renderTiles(); renderShots();
   say("#pcState", S.statsAge < 20000 ? "The PC script is running." : "No report from the PC. It may be off, or the script isn't running.", S.statsAge >= 20000);
   if (first) {
     rems = S.reminders; dls = S.deadlines; cmds = S.commands; links = S.links; modes = S.modes; $("#pc").value = S.pc;
     editor($("#rows"), cmds, CF); editor($("#remRows"), rems, RF, true); editor($("#dlRows"), dls, DF, false, renderDls);
     editor($("#lkRows"), links, LF, false, renderLinks); editor($("#mdRows"), modes, MF, false, renderLinks);
-    pads = S.pads; snds = S.sounds;
+    pads = S.pads; snds = S.sounds; voice = S.voice;
+    editor($("#vRows"), voice, VF); $("#voiceOn").checked = S.voiceOn; $("#voiceLang").value = S.voiceLang;
     editor($("#padRows"), pads, PF, true, renderPads); editor($("#sndRows"), snds, SF, false, renderSounds);
     renderPads(); renderSounds();
     renderRemote(); renderDls();
@@ -883,6 +904,26 @@ $("#shutCancel").onclick = async () => {
   say("#pwMsg", r.msg === "Sent." ? "Shutdown cancelled." : r.msg, r.msg !== "Sent.");
 };
 $("#awakeOn").onchange = () => api("/api/pcset", { name: "keep_awake", value: $("#awakeOn").checked ? "1" : "0" });
+
+let voice = [];
+const VF = [["phrase", "What you say"], ["cmd", "Action"]];
+[["Screenshot", "screenshot", "screenshot"], ["Play or pause", "pause", "input:media playpause"], ["Next song", "next song", "input:media next"],
+ ["Volume up", "volume up", "input:media volup"], ["Volume down", "volume down", "input:media voldown"],
+ ["Mute", "mute", "input:mute"], ["Lock PC", "lock computer", "power:lock"]].forEach(([l, ph, cmd]) => {
+  const b = el("button", "chip", l);
+  b.onclick = () => { voice.push({ phrase: ph, cmd }); editor($("#vRows"), voice, VF); };
+  $("#vpre").append(b);
+});
+$("#addVoice").onclick = () => { voice.push({ phrase: "", cmd: "" }); editor($("#vRows"), voice, VF); };
+$("#voiceSave").onclick = async () => {
+  await api("/api/kv", { key: "voice", value: JSON.stringify(voice.filter(v => v.phrase && v.cmd)) });
+  const on = $("#voiceOn").checked;
+  if (on && window.Android && !Android.hasMic()) { Android.askMic(); return say("#voiceMsg", "Allow the microphone, then tap Save again.", 1); }
+  const r = await api("/api/voiceset", { on: on ? "1" : "0", lang: $("#voiceLang").value });
+  say("#voiceMsg", r.msg === "ok" ? (on ? "Listening." : "Stopped.") : r.msg, r.msg !== "ok");
+};
+$("#cuePhone").onclick = async () => { const r = await api("/api/cue", { name: "meet" }); say("#cueMsg", r.msg, r.msg !== "Playing."); };
+$("#cuePc").onclick = async () => { const r = await api("/api/command", { cmd: "cue:meet" }); say("#cueMsg", r.msg === "Sent." ? "Playing on the PC." : r.msg, r.msg !== "Sent."); };
 
 function handleShare() {
   const q = new URLSearchParams(location.search).get("share");

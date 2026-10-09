@@ -1,0 +1,1 @@
+Put your connection sounds here: meet.mp3 (plays when the phone and PC find each other) and optionally leave.mp3. Names must be lowercase.
