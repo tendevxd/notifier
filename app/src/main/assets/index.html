@@ -175,6 +175,13 @@
         <p class="msg" id="padMsg"></p>
       </details>
     </div>
+    <div class="sec"><h2>Wake PC</h2></div>
+    <div class="panel">
+      <p class="hint">Send a Wake-on-LAN magic packet to your PC. Works if the PC supports WoL on its network adapter and you're on the same Wi-Fi.</p>
+      <button class="btn ghost" id="wolBtn">Wake the PC now</button>
+      <p class="hint" style="margin-top:10px">Auto-wake: the phone sends WoL on its own if the PC has been missing for the delay set in Setup.</p>
+      <p class="msg" id="wolMsg"></p>
+    </div>
     <div class="sec"><h2>Controls</h2></div>
     <div class="panel">
       <label>Slider 1</label><input class="sl" data-n="slider1" type="range" min="0" max="1" step="0.01">
@@ -372,6 +379,23 @@
       <div id="rows"></div>
       <button class="btn ghost" id="addRow">Add button</button>
     </div>
+
+    <div class="sec"><h2>Wake-on-LAN</h2></div>
+    <div class="panel">
+      <p class="hint">Used by the "Wake the PC now" button and by auto-wake. Find your MAC with <code>ipconfig /all</code> on the PC — look for "Physical Address" under your Ethernet or Wi-Fi adapter.</p>
+      <div class="f"><label for="wolMac">PC MAC address</label>
+        <input id="wolMac" type="text" placeholder="AA:BB:CC:DD:EE:FF"></div>
+      <div class="f"><label for="wolDelay">Auto-wake after (minutes of PC missing)</label>
+        <input id="wolDelay" type="number" min="1" value="5"></div>
+    </div>
+
+    <div class="sec"><h2>Battery</h2></div>
+    <div class="panel">
+      <p class="hint">The app holds a wake lock so it can keep listening for your PC. Below this battery level (and not charging), it releases the lock to save power.</p>
+      <div class="f"><label for="battThresh">Release wake lock below (%)</label>
+        <input id="battThresh" type="number" min="1" max="99" value="15"></div>
+    </div>
+
     <div class="sec"><h2>Voice commands</h2></div>
     <div class="panel">
       <label class="check f"><input id="voiceOn" type="checkbox"> Always listening for my phrases</label>
@@ -554,6 +578,10 @@ async function load(first) {
     const P = S.prefs;
     $("#qOn").checked = P.q_on; $("#qFrom").value = P.q_from; $("#qTo").value = P.q_to;
     $("#vLang").value = P.tts_lang; $("#vRate").value = P.tts_rate; $("#pinOff").hidden = !P.pin;
+    // F3c + F4c: new setup fields, with fallbacks if the state predates them
+    $("#wolMac").value = P.wol_mac || "90:48:9A:E3:64:6E";
+    $("#wolDelay").value = P.wol_delay_min || 5;
+    $("#battThresh").value = P.batt_threshold || 15;
   }
   renderLinks();
 }
@@ -578,6 +606,12 @@ $("#go").onclick = async () => {
 };
 $("#cueBack").onclick = () => { cue = Math.max(0, cue - 1); renderCue(); };
 $("#cueReset").onclick = () => { cue = 0; renderCue(); };
+
+// F3c: Wake PC button
+$("#wolBtn").onclick = async () => {
+  const r = await api("/api/command", { cmd: "wol" });
+  say("#wolMsg", r.msg === "Sent." ? "Magic packet sent. The PC should wake in a few seconds." : r.msg, r.msg !== "Sent.");
+};
 
 const last = {};
 function sendVal(name, v, force) {
@@ -714,7 +748,10 @@ $("#planSave").onclick = async () => {
 
 const prefsPayload = () => ({
   q_on: $("#qOn").checked ? "1" : "0", q_from: $("#qFrom").value || "23:00", q_to: $("#qTo").value || "07:00",
-  tts_lang: $("#vLang").value, tts_rate: $("#vRate").value || "1" });
+  tts_lang: $("#vLang").value, tts_rate: $("#vRate").value || "1",
+  wol_mac: ($("#wolMac").value || "").trim(),
+  wol_delay_min: $("#wolDelay").value || "5",
+  batt_threshold: $("#battThresh").value || "15" });
 $("#addRow").onclick = () => { cmds.push({ label: "", cmd: "" }); editor($("#rows"), cmds, CF); };
 $("#setSave").onclick = async () => {
   cmds = cmds.filter(c => c.cmd.trim());
@@ -909,7 +946,7 @@ let voice = [];
 const VF = [["phrase", "What you say"], ["cmd", "Action"]];
 [["Screenshot", "screenshot", "screenshot"], ["Play or pause", "pause", "input:media playpause"], ["Next song", "next song", "input:media next"],
  ["Volume up", "volume up", "input:media volup"], ["Volume down", "volume down", "input:media voldown"],
- ["Mute", "mute", "input:mute"], ["Lock PC", "lock computer", "power:lock"]].forEach(([l, ph, cmd]) => {
+ ["Mute", "mute", "input:mute"], ["Lock PC", "lock computer", "power:lock"], ["Wake PC", "wake my pc", "wol"]].forEach(([l, ph, cmd]) => {
   const b = el("button", "chip", l);
   b.onclick = () => { voice.push({ phrase: ph, cmd }); editor($("#vRows"), voice, VF); };
   $("#vpre").append(b);

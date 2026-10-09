@@ -28,12 +28,20 @@ import java.util.ArrayList;
 import java.util.Locale;
 
 public class VoiceService extends Service {
+    static final long HEARTBEAT_MS = 90_000L;     // if no result in 90s, restart the recognizer
+    static final long MAX_BACKOFF_MS = 30_000L;   // cap the retry delay
+    static final int PERM_ERROR_LIMIT = 2;        // give up after this many permission errors
+
     SpeechRecognizer sr;
     Intent recIntent;
     Handler h = new Handler(Looper.getMainLooper());
     SharedPreferences prefs;
-    boolean running = false;
+    volatile boolean running = false;
     long lastFire = 0;
+    long lastResultAt = 0;
+    long backoff = 300;
+    int permErrors = 0;
+    Runnable heartbeat;
 
     @Override
     public IBinder onBind(Intent i) {
@@ -43,6 +51,7 @@ public class VoiceService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         prefs = getSharedPreferences("notifier", MODE_PRIVATE);
+
         if (intent != null && "stop".equals(intent.getAction())) {
             prefs.edit().putBoolean("voice_on", false).apply();
             stopSelf();
@@ -73,8 +82,60 @@ public class VoiceService extends Service {
         if (!running) {
             running = true;
             h.post(this::begin);
+            startHeartbeat();
         }
-        return START_STICKY;
+        return START_STICKY;   // F5c: ask Android to restart us if it kills us
+    }
+
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        // F5c: if the user swipes the app away but voice is still wanted, restart the service.
+        if (prefs.getBoolean("voice_on", false)) {
+            Intent restart = new Intent(getApplicationContext(), VoiceService.class);
+            restart.setPackage(getPackageName());
+            try {
+                if (Build.VERSION.SDK_INT >= 26) {
+                    startForegroundService(restart);
+                } else {
+                    startService(restart);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        super.onTaskRemoved(rootIntent);
+    }
+
+    // F5c: heartbeat watchdog. If the recognizer goes quiet for HEARTBEAT_MS, tear it down
+    // and rebuild. Keeps the service alive through weird OEM speech-engine states.
+    void startHeartbeat() {
+        if (heartbeat != null) h.removeCallbacks(heartbeat);
+        heartbeat = new Runnable() {
+            @Override
+            public void run() {
+                if (!running) return;
+                long silence = System.currentTimeMillis() - lastResultAt;
+                if (lastResultAt > 0 && silence > HEARTBEAT_MS) {
+                    restartRecognizer();
+                }
+                h.postDelayed(this, 30_000L);
+            }
+        };
+        h.postDelayed(heartbeat, HEARTBEAT_MS);
+    }
+
+    void restartRecognizer() {
+        try {
+            if (sr != null) {
+                sr.cancel();
+                sr.destroy();
+            }
+        } catch (Exception ignored) {
+        }
+        sr = null;
+        backoff = 300;
+        lastResultAt = System.currentTimeMillis();
+        begin();
     }
 
     void begin() {
@@ -96,14 +157,40 @@ public class VoiceService extends Service {
             @Override
             public void onError(int e) {
                 if (e == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
-                    stopSelf();
+                    permErrors++;
+                    if (permErrors >= PERM_ERROR_LIMIT) {
+                        prefs.edit().putBoolean("voice_on", false).apply();
+                        stopSelf();
+                        return;
+                    }
+                    again(5000);
                     return;
                 }
-                again(e == SpeechRecognizer.ERROR_RECOGNIZER_BUSY || e == SpeechRecognizer.ERROR_CLIENT ? 1200 : 300);
+
+                // Classify the error to pick a sensible retry delay.
+                long delay;
+                if (e == SpeechRecognizer.ERROR_RECOGNIZER_BUSY || e == SpeechRecognizer.ERROR_CLIENT) {
+                    delay = backoff;
+                    backoff = Math.min(MAX_BACKOFF_MS, backoff * 2);
+                } else if (e == SpeechRecognizer.ERROR_NETWORK || e == SpeechRecognizer.ERROR_NETWORK_TIMEOUT) {
+                    delay = 5000;
+                } else if (e == SpeechRecognizer.ERROR_NO_MATCH || e == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
+                    delay = 400;   // normal silence, reset the backoff
+                    backoff = 300;
+                } else if (e == SpeechRecognizer.ERROR_AUDIO) {
+                    delay = 3000;
+                } else {
+                    delay = backoff;
+                    backoff = Math.min(MAX_BACKOFF_MS, backoff * 2);
+                }
+                again(delay);
             }
 
             @Override
             public void onResults(Bundle b) {
+                lastResultAt = System.currentTimeMillis();
+                backoff = 300;
+                permErrors = 0;
                 ArrayList<String> r = b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                 if (r != null) match(r);
                 again(300);
@@ -115,17 +202,26 @@ public class VoiceService extends Service {
         recIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5);
         recIntent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
         recIntent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
+        lastResultAt = System.currentTimeMillis();
         again(0);
     }
 
     void again(long delay) {
         if (!running) return;
         h.postDelayed(() -> {
+            if (!running) return;
             try {
+                if (sr == null) return;
                 sr.cancel();
                 sr.startListening(recIntent);
             } catch (Exception e) {
-                again(1500);
+                // If the recognizer itself is broken, rebuild it.
+                if (backoff >= MAX_BACKOFF_MS) {
+                    restartRecognizer();
+                } else {
+                    backoff = Math.min(MAX_BACKOFF_MS, backoff * 2);
+                    again(backoff);
+                }
             }
         }, delay);
     }
@@ -196,7 +292,14 @@ public class VoiceService extends Service {
     public void onDestroy() {
         running = false;
         h.removeCallbacksAndMessages(null);
-        if (sr != null) sr.destroy();
+        if (sr != null) {
+            try {
+                sr.cancel();
+                sr.destroy();
+            } catch (Exception ignored) {
+            }
+            sr = null;
+        }
         super.onDestroy();
     }
 }
