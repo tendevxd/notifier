@@ -4,111 +4,121 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#000000">
 <title>Prompt desk</title>
 <style>
-  :root { --line:#ffffff14; --ink:#f6f6fb; --mute:#8d8da3; --v:#8b5cff; --p:#ff3da6;
-          --go:#2ee59d; --warn:#ffb347; --bad:#ff5d6c; --grad:linear-gradient(135deg,#8b5cff,#ff3da6);
-          --card:linear-gradient(180deg,#15151e,#0d0d13); }
+  :root { --card:#0e0e13; --card2:#17171f; --line:#ffffff14; --ink:#f6f6fb; --mute:#8d8da3;
+          --acc:#8b5cff; --acc2:#ff3da6; --glow:#8b5cff55; --go:#2ee59d; --warn:#ffb347; --bad:#ff5d6c;
+          --grad:linear-gradient(135deg,var(--acc),var(--acc2)); }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   [hidden] { display:none !important; }
+  html { background:#000; overscroll-behavior:none; }
   body { margin:0; color:var(--ink); font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;
-         background:radial-gradient(520px 260px at 50% -60px,#3b1d9a66,transparent),#000; background-attachment:fixed; }
-  main { max-width:520px; margin:0 auto; padding:max(18px,env(safe-area-inset-top)) 16px 120px; }
-  header { display:flex; justify-content:space-between; align-items:flex-start; margin:6px 0 20px; gap:10px; }
-  h1 { font-size:2.4rem; font-weight:800; letter-spacing:-.045em; line-height:1; margin:0; }
-  .who { color:var(--mute); font-size:.8rem; margin:8px 0 0; word-break:break-all; }
-  .live { display:flex; align-items:center; gap:7px; background:#ffffff10; border:1px solid var(--line);
-          border-radius:999px; padding:5px 12px; font-size:.78rem; color:var(--mute); white-space:nowrap; }
-  .live i { width:8px; height:8px; border-radius:50%; background:var(--bad); }
-  .live.on i { background:var(--go); box-shadow:0 0 10px var(--go); }
-  h2 { font-size:1.2rem; letter-spacing:-.02em; margin:0 0 4px; }
-  .sec { display:flex; align-items:center; gap:10px; margin:24px 0 10px; }
-  .sec:first-child { margin-top:0; } .sec h2 { margin:0; } .sec .x { margin-left:auto; }
-  .sec::before { content:""; width:6px; height:22px; border-radius:3px; background:var(--grad); }
-  .hint { color:var(--mute); font-size:.9rem; margin:0 0 14px; }
-  .panel { background:var(--card); border:1px solid var(--line); border-radius:22px; padding:16px; margin-bottom:14px;
-           box-shadow:inset 0 1px 0 #ffffff0d; }
+         background:radial-gradient(560px 300px at 50% -90px,var(--glow),transparent),#000; background-attachment:fixed; }
+  main { max-width:540px; margin:0 auto; padding:max(16px,env(safe-area-inset-top)) 16px 118px; }
+  .top { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin:4px 0 18px; }
+  .hello { margin:0; color:var(--mute); font-size:.85rem; }
+  h1 { margin:2px 0 0; font-size:2.3rem; font-weight:800; letter-spacing:-.045em; line-height:1.05; }
+  h2, h3 { margin:0; letter-spacing:-.02em; } h3 { font-size:1.05rem; }
+  .pills { display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
+  .pill { display:flex; align-items:center; gap:7px; background:#ffffff10; border:1px solid var(--line);
+          border-radius:999px; padding:4px 11px; font-size:.75rem; color:var(--mute); }
+  .pill i { width:8px; height:8px; border-radius:50%; background:var(--bad); }
+  .pill.on i { background:var(--go); box-shadow:0 0 10px var(--go); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:24px; padding:16px; margin-bottom:12px;
+          box-shadow:inset 0 1px 0 #ffffff0d; }
+  .cardhead { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; gap:8px; }
+  .muted { color:var(--mute); font-size:.85rem; } .hint { color:var(--mute); font-size:.88rem; margin:0 0 12px; }
+  .link { background:none; border:0; color:var(--acc); font-weight:600; padding:4px; }
   label { display:block; font-weight:600; font-size:.88rem; margin:0 0 6px; }
   input[type=text], input[type=number], input[type=time], input[type=date], input[type=password], textarea, select {
     width:100%; font:inherit; color:var(--ink); background:#ffffff0a; color-scheme:dark;
     border:1px solid var(--line); border-radius:14px; padding:12px 14px; }
-  textarea { min-height:84px; resize:vertical; } input[type=file] { color:var(--mute); width:100%; }
-  ::placeholder { color:#6d6d82; }
-  :focus-visible { outline:2px solid var(--v); outline-offset:2px; }
+  textarea { min-height:90px; resize:vertical; } input[type=file] { color:var(--mute); width:100%; }
+  ::placeholder { color:#6d6d82; } :focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
   .f { margin-bottom:14px; }
   button { font:inherit; cursor:pointer; color:var(--ink); }
-  .btn { width:100%; font-weight:700; color:#fff; background:var(--grad); border:0; border-radius:16px; padding:14px;
-         box-shadow:0 8px 24px #8b5cff40; }
+  .btn { width:100%; font-weight:700; color:#fff; background:var(--grad); border:0; border-radius:16px; padding:14px; box-shadow:0 8px 24px var(--glow); }
   .btn.ghost { background:#ffffff0c; box-shadow:none; border:1px solid var(--line); font-weight:600; }
-  .btn:active { transform:scale(.97); }
-  .row { display:flex; gap:8px; align-items:center; }
-  .row > * { flex:1; min-width:0; } .row > .x { flex:0 0 auto; }
+  .btn.sm { width:auto; padding:12px 18px; } .btn:active { transform:scale(.97); }
+  .row { display:flex; gap:8px; align-items:center; } .row > * { flex:1; min-width:0; } .row > .x { flex:0 0 auto; }
   .row.wrap { flex-wrap:wrap; } .row.wrap > :first-child { flex-basis:100%; }
   .chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
   .chip, .seg button { background:#ffffff0c; border:1px solid var(--line); border-radius:999px; padding:7px 14px; font-size:.88rem; }
   .seg { display:flex; gap:8px; margin-bottom:14px; } .seg button { flex:1; }
-  .seg button[aria-pressed="true"] { background:var(--grad); border-color:transparent; font-weight:700; }
+  .seg button[aria-pressed="true"] { background:var(--grad); border-color:transparent; font-weight:700; color:#fff; }
   .check { display:flex; align-items:center; gap:10px; font-weight:400; font-size:1rem; }
-  .check input { width:22px; height:22px; accent-color:var(--v); }
-  .msg { min-height:1.5em; margin:10px 2px 0; font-weight:600; }
-  .msg.bad { color:var(--bad); } .msg.ok { color:var(--go); }
+  .check input { width:22px; height:22px; accent-color:var(--acc); }
+  .empty { color:var(--mute); margin:0 0 8px; }
   ul { list-style:none; margin:0; padding:0; }
-  .list li { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:12px 14px 12px 18px;
-             margin-bottom:10px; position:relative; overflow:hidden; }
+  .list li { background:var(--card2); border-radius:16px; padding:10px 14px 10px 18px; margin-bottom:8px; position:relative; overflow:hidden; }
   .list li::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--c); }
   .list li p { margin:2px 0; word-break:break-word; } .list small { color:var(--mute); }
   .list img { width:100%; border-radius:12px; margin-top:8px; display:block; }
-  .info { --c:var(--v); } .warn { --c:var(--warn); } .error { --c:var(--bad); }
-  .empty { color:var(--mute); margin:0 0 6px; }
-  details { margin-bottom:14px; } summary { cursor:pointer; font-weight:600; padding:12px 0; color:var(--mute); }
-  .stby { color:var(--warn); font-size:.9rem; margin:0; }
-  #cueNext { font-size:1.7rem; letter-spacing:-.02em; margin:2px 0 14px; }
-  .go { display:block; width:100%; height:120px; border:0; border-radius:28px; background:var(--go); color:#00130b;
-        font-weight:800; font-size:3.2rem; letter-spacing:.06em; box-shadow:0 0 50px #2ee59d55; margin-bottom:10px; }
-  .go:active { transform:scale(.985); box-shadow:0 0 90px #2ee59dB0; }
+  .info { --c:var(--acc); } .warn { --c:var(--warn); } .error { --c:var(--bad); }
+  details { margin-bottom:12px; } summary { cursor:pointer; font-weight:600; padding:10px 0; color:var(--mute); }
+  .cmdbar { display:flex; gap:8px; background:var(--card); border:1px solid var(--line); border-radius:20px; padding:6px 6px 6px 16px; margin-bottom:12px; }
+  .cmdbar input { background:none; border:0; padding:10px 0; border-radius:0; flex:1; } .cmdbar input:focus-visible { outline:none; }
+  .cmdbar button { border:0; border-radius:14px; background:var(--grad); color:#fff; font-weight:700; padding:0 18px; }
+  .qgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:12px; }
+  .q { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:14px 2px 10px; display:flex; flex-direction:column;
+       align-items:center; gap:6px; font-size:.7rem; font-weight:600; }
+  .q:active { background:var(--card2); transform:scale(.96); } .q.on svg { stroke:var(--go); }
+  svg.i { width:24px; height:24px; stroke:var(--acc); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .np { display:flex; gap:12px; align-items:center; margin-bottom:12px; }
+  .disc { width:54px; height:54px; border-radius:16px; background:var(--grad); flex:0 0 auto; display:grid; place-items:center; }
+  .disc svg { stroke:#fff; width:26px; height:26px; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .np .t { min-width:0; flex:1; } .np b { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .round { width:44px; height:44px; border-radius:50%; border:1px solid var(--line); background:var(--card2); padding:0; display:grid; place-items:center; flex:0 0 auto; }
+  .round.big { background:var(--grad); border:0; } .round svg { width:20px; height:20px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .sl { width:100%; margin:4px 0 12px; accent-color:var(--acc); }
+  .sparks { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .spark { background:var(--card2); border-radius:16px; padding:10px 12px; } .spark b { font-size:1.4rem; letter-spacing:-.03em; }
+  .spark span { color:var(--mute); font-size:.75rem; margin-left:6px; } .spark canvas { width:100%; height:34px; display:block; margin-top:4px; }
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
-  .grid button { background:#ffffff0a; border:1px solid var(--line); border-radius:18px; padding:22px 8px; font-weight:700; word-break:break-word; }
-  .grid button:active { background:var(--v); }
-  .grid.mode button { background:var(--grad); border:0; padding:26px 8px; box-shadow:0 8px 24px #ff3da633; }
-  .sl { width:100%; margin:4px 0 14px; accent-color:var(--v); }
+  .grid button { background:var(--card2); border:1px solid var(--line); border-radius:18px; padding:20px 8px; font-weight:700; word-break:break-word; }
+  .grid button:active { background:var(--acc); } .grid.hot button { background:var(--grad); border:0; }
+  .stby { color:var(--warn); font-size:.9rem; margin:0; } #cueNext { font-size:1.7rem; letter-spacing:-.02em; margin:2px 0 14px; }
+  .go { display:block; width:100%; height:120px; border:0; border-radius:28px; background:var(--go); color:#00130b; font-weight:800; font-size:3.2rem;
+        letter-spacing:.06em; box-shadow:0 0 50px #2ee59d55; margin-bottom:10px; } .go:active { transform:scale(.985); box-shadow:0 0 90px #2ee59dB0; }
   .pad { position:relative; height:210px; border:1px solid var(--line); border-radius:18px; touch-action:none; background:
          linear-gradient(var(--line) 1px, transparent 1px) 0 0/25% 25%, linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0/25% 25%, #ffffff08; }
-  .dot { position:absolute; width:26px; height:26px; margin:-13px; border-radius:50%; background:var(--grad); left:50%; top:50%; box-shadow:0 0 20px var(--v); }
-  .dl { display:flex; align-items:baseline; gap:12px; padding:10px 0; border-top:1px solid var(--line); }
-  .dl:first-child { border-top:0; } .dl b { font-size:2rem; letter-spacing:-.04em; min-width:3.2rem; }
-  .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
-  .tiles .empty { grid-column:1/-1; margin:0; }
-  .tile { background:#ffffff0a; border:1px solid var(--line); border-radius:14px; padding:10px 4px; text-align:center; }
-  .tile b { display:block; font-size:1.3rem; letter-spacing:-.03em; } .tile span { color:var(--mute); font-size:.78rem; }
-  .tile.hot b { color:var(--bad); }
+  .dot { position:absolute; width:26px; height:26px; margin:-13px; border-radius:50%; background:var(--grad); left:50%; top:50%; box-shadow:0 0 20px var(--acc); }
+  .touch { height:230px; border-radius:20px; border:1px solid var(--line); touch-action:none; display:grid; place-items:center; color:var(--mute);
+           user-select:none; -webkit-user-select:none; background:radial-gradient(circle at 50% 40%, var(--glow), #ffffff06); }
+  .pads { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:12px; }
+  .pad1 { aspect-ratio:1; background:#ffffff0a; border:1px solid var(--line); border-radius:18px; font-weight:800; font-size:1.1rem; touch-action:none; user-select:none; -webkit-user-select:none; }
+  .pad1.on { background:var(--grad); border-color:transparent; box-shadow:0 0 28px var(--glow); }
   #shotImg { width:100%; border-radius:14px; display:block; margin-top:12px; }
   .gal { display:flex; gap:8px; overflow-x:auto; margin-top:10px; padding-bottom:4px; }
-  .gal img { height:58px; border-radius:10px; border:2px solid transparent; flex:0 0 auto; }
-  .gal img.on { border-color:var(--v); }
-  #lock { position:fixed; inset:0; z-index:9; background:#000; display:flex; flex-direction:column; justify-content:center; gap:12px; padding:32px; }
-  .view { animation:in .18s ease-out; } @keyframes in { from { opacity:0; transform:translateY(6px); } }
-  @media (prefers-reduced-motion: reduce) { .view { animation:none; } }
-  nav { position:fixed; left:50%; transform:translateX(-50%); bottom:max(12px,env(safe-area-inset-bottom));
-        width:calc(100% - 24px); max-width:496px; display:flex; background:#0b0b11d9; backdrop-filter:blur(18px);
-        -webkit-backdrop-filter:blur(18px); border:1px solid #ffffff1c; border-radius:28px; padding:6px; overflow-x:auto; scrollbar-width:none; }
-  nav button { flex:0 0 17%; background:none; border:0; color:var(--mute); padding:4px 0 2px; font-size:.68rem; font-weight:600;
-               display:flex; flex-direction:column; align-items:center; gap:2px; }
-  nav .ic { width:46px; height:30px; border-radius:15px; display:grid; place-items:center; }
-  nav svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-  nav button[aria-current="true"] { color:#fff; }
-  nav button[aria-current="true"] .ic { background:var(--grad); box-shadow:0 4px 16px #8b5cff66; }
-  #con { background:#000; border:1px solid var(--line); border-radius:14px; padding:12px; margin:12px 0 0; max-height:260px;
-         overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace; color:#9be9b8; white-space:pre-wrap; word-break:break-word; }
-  .touch { height:230px; border-radius:20px; border:1px solid var(--line); touch-action:none; display:grid; place-items:center;
-           color:var(--mute); user-select:none; background:radial-gradient(circle at 50% 40%, #8b5cff22, #ffffff06); }
-  .pads { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:12px; }
-  .pad1 { aspect-ratio:1; background:#ffffff0a; border:1px solid var(--line); border-radius:18px; font-weight:800; font-size:1.1rem;
-          touch-action:none; user-select:none; -webkit-user-select:none; }
-  .pad1.on { background:var(--grad); border-color:transparent; box-shadow:0 0 28px #8b5cff88; }
+  .gal img { height:58px; border-radius:10px; border:2px solid transparent; flex:0 0 auto; } .gal img.on { border-color:var(--acc); }
+  .dl { display:flex; align-items:baseline; gap:12px; padding:8px 0; border-top:1px solid var(--line); } .dl:first-child { border-top:0; }
+  .dl b { font-size:2rem; letter-spacing:-.04em; min-width:3.2rem; }
+  .menu { display:grid; gap:10px; }
+  .mrow { display:flex; align-items:center; gap:14px; width:100%; text-align:left; background:var(--card); border:1px solid var(--line); border-radius:20px; padding:14px 16px; }
+  .mrow .ic { width:42px; height:42px; border-radius:14px; background:var(--grad); display:grid; place-items:center; flex:0 0 auto; }
+  .mrow .ic svg { stroke:#fff; width:22px; height:22px; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .mrow b { display:block; } .mrow small { color:var(--mute); } .mrow .go2 { margin-left:auto; color:var(--mute); font-size:1.3rem; }
+  .subhead { display:flex; align-items:center; gap:10px; margin:0 0 14px; }
+  .back { width:38px; height:38px; border-radius:50%; background:var(--card2); border:1px solid var(--line); padding:0; font-size:1.3rem; }
   .bub { max-width:86%; padding:10px 14px; border-radius:18px; margin:0 0 10px; word-break:break-word; white-space:pre-wrap; }
-  .bub.me { margin-left:auto; background:var(--grad); } .bub.ai { background:#ffffff10; border:1px solid var(--line); }
-  .btn.sm { width:auto; padding:12px 18px; }
-  .pills { display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
+  .bub.me { margin-left:auto; background:var(--grad); color:#fff; } .bub.ai { background:var(--card2); border:1px solid var(--line); }
+  #con { background:#000; border:1px solid var(--line); border-radius:14px; padding:12px; margin:12px 0 0; max-height:300px; overflow:auto;
+         font:12px/1.5 ui-monospace,Menlo,Consolas,monospace; color:#9be9b8; white-space:pre-wrap; word-break:break-word; }
+  .sw { display:flex; gap:10px; flex-wrap:wrap; } .sw button { width:38px; height:38px; border-radius:50%; border:2px solid var(--line); padding:0; }
+  .help code { background:var(--card2); border-radius:8px; padding:2px 7px; font-size:.85rem; } .help p { margin:6px 0; }
+  #toast { position:fixed; left:50%; bottom:calc(98px + env(safe-area-inset-bottom)); transform:translate(-50%,16px); background:#1d1d27; border:1px solid var(--line);
+           padding:10px 18px; border-radius:999px; opacity:0; pointer-events:none; transition:.25s; max-width:90%; font-weight:600; z-index:30; text-align:center; }
+  #toast.show { opacity:1; transform:translate(-50%,0); } #toast.bad { color:var(--bad); }
+  #lock { position:fixed; inset:0; z-index:40; background:#000; display:flex; flex-direction:column; justify-content:center; gap:12px; padding:32px; }
+  .view { animation:in .2s ease-out; } @keyframes in { from { opacity:0; transform:translateY(8px); } }
+  @media (prefers-reduced-motion: reduce) { .view { animation:none; } }
+  nav { position:fixed; left:50%; transform:translateX(-50%); bottom:max(12px,env(safe-area-inset-bottom)); width:calc(100% - 24px); max-width:516px;
+        display:flex; background:#0a0a0fe6; backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); border:1px solid #ffffff1c; border-radius:30px; padding:6px; z-index:20; }
+  nav button { flex:1; background:none; border:0; color:var(--mute); padding:4px 0 2px; font-size:.7rem; font-weight:600; display:flex; flex-direction:column; align-items:center; gap:2px; }
+  nav .ic { width:48px; height:30px; border-radius:15px; display:grid; place-items:center; }
+  nav svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  nav button[aria-current="true"] { color:#fff; } nav button[aria-current="true"] .ic { background:var(--grad); box-shadow:0 4px 16px var(--glow); }
 </style>
 </head>
 <body>
@@ -117,145 +127,56 @@
   <p class="hint">Enter your PIN.</p>
   <input id="pinIn" type="password" inputmode="numeric" placeholder="PIN">
   <button class="btn" id="unlock">Unlock</button>
-  <p class="msg" id="lockMsg"></p>
+  <p class="muted" id="lockMsg"></p>
 </div>
+<div id="toast"></div>
+
 <main>
-  <header>
-    <div>
-      <h1>Prompt desk</h1>
-      <p class="who">Ten · on your PC: <span id="ip">…</span></p>
-    </div>
-    <div class="pills"><div class="live" id="live"><i></i>Phone</div><div class="live" id="pcLive"><i></i>PC</div></div>
+  <header class="top">
+    <div><p class="hello" id="hello">Hello Ten</p><h1 id="pageTitle">Home</h1></div>
+    <div class="pills"><div class="pill" id="live"><i></i>Phone</div><div class="pill" id="pcLive"><i></i>PC</div></div>
   </header>
 
-  <section class="view" id="inbox">
+  <!-- HOME -->
+  <section class="view" id="home">
     <div id="asks"></div>
-    <div class="sec"><h2>Inbox</h2><button class="chip x" id="clear">Clear</button></div>
-    <ul class="list" id="list"></ul>
-    <p class="empty" id="empty">Nothing yet. Alerts from your scripts land here.</p>
-    <details>
-      <summary>Send an alert to this phone</summary>
-      <div class="panel">
-        <div class="seg" id="types">
-          <button data-t="info" aria-pressed="true">Info</button>
-          <button data-t="warn" aria-pressed="false">Warning</button>
-          <button data-t="error" aria-pressed="false">Error</button>
-        </div>
-        <div class="f"><label for="title">Title</label><input id="title" type="text" value="Alert"></div>
-        <div class="f"><label for="text">Message</label><textarea id="text"></textarea></div>
-        <label class="check f"><input id="speak" type="checkbox" checked> Read it aloud</label>
-        <button class="btn" id="sendBtn">Send</button>
-        <p class="msg" id="sendMsg"></p>
+    <div class="cmdbar"><input id="cmdIn" type="text" placeholder="screenshot, volume 30, open youtube cats" autocomplete="off" autocapitalize="off" enterkeyhint="go"><button id="cmdGo">Go</button></div>
+    <div class="qgrid" id="quick"></div>
+    <div class="card">
+      <div class="np">
+        <div class="disc" id="disc"></div>
+        <div class="t"><b id="npTitle">Nothing playing</b><span class="muted" id="npArtist"></span></div>
+        <button class="round" id="npPrev"></button><button class="round big" id="npPlay"></button><button class="round" id="npNext"></button>
       </div>
-    </details>
-  </section>
-
-  <section class="view" id="stage" hidden>
-    <div class="sec"><h2>Your PC</h2></div>
-    <div class="panel"><div class="tiles" id="tiles"></div></div>
-    <div class="sec"><h2>Cues</h2></div>
-    <div class="panel">
-      <p class="stby">Standing by</p>
-      <h2 id="cueNext"></h2>
-      <button class="go" id="go">GO</button>
-      <div class="row"><button class="btn ghost" id="cueBack">Back</button><button class="btn ghost" id="cueReset">Reset</button></div>
-      <p class="hint" style="margin:12px 0 0">GO fires your buttons in order. Edit them in Setup.</p>
-    </div>
-    <div class="grid" id="cmds"></div>
-    <p class="empty" id="noCmds">No buttons yet. Add them in Setup.</p>
-    <p class="msg" id="cMsg"></p>
-    <div class="sec"><h2>Pads</h2></div>
-    <div class="panel">
-      <div class="pads" id="pads"></div>
-      <p class="hint">Each pad sends an OSC message and a MIDI note to your PC. With none saved you get 8 default pads.</p>
-      <details><summary>Edit pads</summary>
-        <div id="padRows"></div>
-        <button class="btn ghost" id="addPad">Add pad</button>
-        <button class="btn" id="padSave" style="margin-top:8px">Save pads</button>
-        <p class="msg" id="padMsg"></p>
-      </details>
-    </div>
-    <div class="sec"><h2>Wake PC</h2></div>
-    <div class="panel">
-      <p class="hint">Send a Wake-on-LAN magic packet to your PC. Works if the PC supports WoL on its network adapter and you're on the same Wi-Fi.</p>
-      <button class="btn ghost" id="wolBtn">Wake the PC now</button>
-      <p class="hint" style="margin-top:10px">Auto-wake: the phone sends WoL on its own if the PC has been missing for the delay set in Setup.</p>
-      <p class="msg" id="wolMsg"></p>
-    </div>
-    <div class="sec"><h2>Controls</h2></div>
-    <div class="panel">
-      <label>Slider 1</label><input class="sl" data-n="slider1" type="range" min="0" max="1" step="0.01">
-      <label>Slider 2</label><input class="sl" data-n="slider2" type="range" min="0" max="1" step="0.01">
-      <label>Slider 3</label><input class="sl" data-n="slider3" type="range" min="0" max="1" step="0.01">
-      <label>XY pad</label>
-      <div class="pad" id="pad"><div class="dot" id="dot"></div></div>
-    </div>
-    <div class="sec"><h2>Phone sensors</h2></div>
-    <div class="panel">
-      <p class="hint">Sends tilt and shake to your PC while the app is open.</p>
-      <p><b id="tiltOut">Off</b></p>
-      <button class="btn ghost" id="sensBtn">Start sending</button>
-    </div>
-  </section>
-
-  <section class="view" id="remote" hidden>
-    <div class="sec"><h2>Now playing</h2></div>
-    <div class="panel">
-      <p style="margin:0 0 12px"><b id="npTitle">Nothing playing</b><br><span class="hint" id="npArtist" style="margin:0"></span></p>
-      <div class="row f">
-        <button class="btn ghost" data-media="prev">Previous</button>
-        <button class="btn" id="npPlay">Play</button>
-        <button class="btn ghost" data-media="next">Next</button>
-      </div>
-      <label for="vol">Volume <span id="volOut">-</span></label>
+      <label for="vol">Volume <span class="muted" id="volOut">-</span></label>
       <input class="sl" id="vol" type="range" min="0" max="100" step="1" value="30">
-      <div class="row">
-        <button class="btn ghost" id="volDown">Volume down</button>
-        <button class="btn ghost" id="volMute">Mute</button>
-        <button class="btn ghost" id="volUp">Volume up</button>
-      </div>
     </div>
-    <div class="sec"><h2>Touchpad</h2></div>
-    <div class="panel">
+    <div class="card">
+      <div class="cardhead"><h3>Your PC</h3><span class="muted" id="pcState"></span></div>
+      <div class="sparks" id="sparks"></div>
+    </div>
+    <div class="card">
+      <div class="cardhead"><h3>Latest alerts</h3><button class="link" data-go="inbox">See all</button></div>
+      <ul class="list" id="recentAlerts"></ul><p class="empty" id="noAlerts">Nothing yet.</p>
+    </div>
+  </section>
+
+  <!-- CONTROL -->
+  <section class="view" id="control" hidden>
+    <div class="card">
+      <div class="cardhead"><h3>Touchpad</h3></div>
       <div class="touch" id="touch"><span>Drag to move. Tap to click.</span></div>
-      <div class="row" style="margin-top:8px">
-        <button class="btn ghost" data-click="left">Left click</button>
-        <button class="btn ghost" data-click="right">Right click</button>
-        <button class="btn ghost" data-click="double">Double</button>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <button class="btn ghost" data-scroll="3">Scroll up</button>
-        <button class="btn ghost" data-scroll="-3">Scroll down</button>
-      </div>
+      <div class="row" style="margin-top:8px"><button class="btn ghost" data-click="left">Left</button><button class="btn ghost" data-click="right">Right</button><button class="btn ghost" data-click="double">Double</button></div>
+      <div class="row" style="margin-top:8px"><button class="btn ghost" data-scroll="3">Scroll up</button><button class="btn ghost" data-scroll="-3">Scroll down</button></div>
     </div>
-    <div class="sec"><h2>Keyboard</h2></div>
-    <div class="panel">
+    <div class="card">
+      <div class="cardhead"><h3>Keyboard</h3></div>
       <div class="row f"><input id="typeIn" type="text" placeholder="Type here, then send"><button class="btn x sm" id="typeGo">Type</button></div>
-      <div class="chips" id="keys"></div>
-      <div class="chips" id="combos"></div>
+      <div class="chips" id="keys"></div><div class="chips" id="combos"></div>
       <div class="row"><button class="btn ghost" data-key="left">Previous slide</button><button class="btn ghost" data-key="right">Next slide</button></div>
     </div>
-    <div class="sec"><h2>Sound board</h2></div>
-    <div class="grid" id="sndGrid"></div>
-    <p class="empty" id="noSnd">No sounds yet. Add a file path below.</p>
-    <button class="btn ghost" id="stopSnd" style="margin-bottom:10px">Stop all sounds</button>
-    <details><summary>Edit sounds</summary>
-      <div class="panel"><div id="sndRows"></div><button class="btn ghost" id="addSnd">Add sound</button></div>
-      <button class="btn" id="sndSave">Save sounds</button><p class="msg" id="sndMsg"></p>
-    </details>
-    <div class="sec"><h2>Watch a program</h2></div>
-    <div class="panel">
-      <div class="seg" id="procMode">
-        <button data-m="watch" aria-pressed="true">Watch</button>
-        <button data-m="close" aria-pressed="false">Close</button>
-      </div>
-      <p class="hint">Watch: the phone tells you when the program closes. Close: force it to quit (for a frozen app).</p>
-      <div class="chips" id="procs"></div>
-      <button class="btn ghost" id="procRefresh">Refresh the list</button>
-      <p class="msg" id="procMsg"></p>
-    </div>
-    <div class="sec"><h2>Power</h2></div>
-    <div class="panel">
+    <div class="card">
+      <div class="cardhead"><h3>Power</h3></div>
       <div class="grid">
         <button data-power="lock">Lock</button><button data-power="sleep">Sleep</button>
         <button data-power="screenoff">Screen off</button><button data-power="restart">Restart</button>
@@ -263,188 +184,223 @@
       <div class="row f"><input id="shutMin" type="number" min="1" value="30"><button class="btn" id="shutGo">Shut down in minutes</button></div>
       <button class="btn ghost" id="shutCancel">Cancel shutdown</button>
       <label class="check" style="margin-top:14px"><input id="awakeOn" type="checkbox"> Keep the PC awake (for long renders)</label>
-      <p class="msg" id="pwMsg"></p>
     </div>
-    <div class="sec"><h2>Away lock</h2></div>
-    <div class="panel">
-      <label class="check f"><input id="awayOn" type="checkbox"> Lock my PC when this phone leaves the Wi-Fi</label>
-      <div class="f"><label for="awayMin">After how many minutes</label><input id="awayMin" type="number" min="1" value="3"></div>
-      <button class="btn" id="awaySave">Save</button>
-      <p class="msg" id="awayMsg"></p>
+    <div class="card">
+      <div class="cardhead"><h3>Programs</h3></div>
+      <div class="seg" id="procMode"><button data-m="watch" aria-pressed="true">Watch</button><button data-m="close" aria-pressed="false">Close</button></div>
+      <p class="hint">Watch: the phone tells you when it closes. Close: force it to quit (for a frozen app).</p>
+      <div class="chips" id="procs"></div><button class="btn ghost" id="procRefresh">Refresh the list</button>
     </div>
   </section>
 
-  <section class="view" id="susie" hidden>
-    <div class="sec"><h2>Susie</h2><button class="chip x" id="chatClear">New chat</button></div>
-    <div id="chat"></div>
-    <div class="panel">
-      <div class="row"><input id="chatIn" type="text" placeholder="Say something"><button class="btn x sm" id="chatGo">Send</button></div>
-      <label class="check" style="margin-top:12px"><input id="chatSpeak" type="checkbox"> Read replies aloud</label>
+  <!-- STAGE -->
+  <section class="view" id="stage" hidden>
+    <div class="card">
+      <p class="stby">Standing by</p><h2 id="cueNext"></h2>
+      <button class="go" id="go">GO</button>
+      <div class="row"><button class="btn ghost" id="cueBack">Back</button><button class="btn ghost" id="cueReset">Reset</button></div>
+      <p class="hint" style="margin:12px 0 0">GO fires your buttons in order. Edit them in Settings.</p>
+    </div>
+    <div class="grid" id="cmds"></div><p class="empty" id="noCmds">No buttons yet. Add them in Settings.</p>
+    <div class="card">
+      <div class="cardhead"><h3>Scenes</h3></div>
+      <p class="hint">A scene runs a list of steps in one tap. They live on the PC.</p>
+      <div class="grid hot" id="sceneGrid"></div><p class="empty" id="noScenes">No scenes yet.</p>
+      <details><summary>Edit scenes</summary>
+        <div id="sceneRows"></div><button class="btn ghost" id="addScene">Add scene</button>
+        <button class="btn" id="sceneSave" style="margin-top:8px">Save scenes</button>
+      </details>
+    </div>
+    <div class="card">
+      <div class="cardhead"><h3>Pads</h3></div>
+      <div class="pads" id="pads"></div>
+      <p class="hint">Each pad sends an OSC message and a MIDI note to your PC. None saved gives 8 default pads.</p>
+      <details><summary>Edit pads</summary>
+        <div id="padRows"></div><button class="btn ghost" id="addPad">Add pad</button>
+        <button class="btn" id="padSave" style="margin-top:8px">Save pads</button>
+      </details>
+    </div>
+    <div class="card">
+      <div class="cardhead"><h3>Sound board</h3></div>
+      <div class="grid" id="sndGrid"></div><p class="empty" id="noSnd">No sounds yet. Add a file path below.</p>
+      <button class="btn ghost" id="stopSnd" style="margin-bottom:10px">Stop all sounds</button>
+      <details><summary>Edit sounds</summary>
+        <div id="sndRows"></div><button class="btn ghost" id="addSnd">Add sound</button>
+        <button class="btn" id="sndSave" style="margin-top:8px">Save sounds</button>
+      </details>
+    </div>
+    <div class="card">
+      <div class="cardhead"><h3>Controls for TouchDesigner</h3></div>
+      <label>Slider 1</label><input class="sl" data-n="slider1" type="range" min="0" max="1" step="0.01">
+      <label>Slider 2</label><input class="sl" data-n="slider2" type="range" min="0" max="1" step="0.01">
+      <label>Slider 3</label><input class="sl" data-n="slider3" type="range" min="0" max="1" step="0.01">
+      <label>XY pad</label><div class="pad" id="pad"><div class="dot" id="dot"></div></div>
+      <p class="hint" style="margin:14px 0 8px">Tilt and shake go to TouchDesigner as /tilt and /shake while this is on.</p>
+      <p style="margin:0 0 8px"><b id="tiltOut">Off</b></p>
+      <button class="btn ghost" id="sensBtn">Start sending tilt</button>
     </div>
   </section>
 
-  <section class="view" id="links" hidden>
-    <div class="sec"><h2>Open on PC</h2></div>
-    <div class="panel">
-      <div class="f"><input id="lkIn" type="text" inputmode="url" placeholder="Paste a link or type a search"></div>
-      <button class="btn" id="lkGo">Open on PC</button>
-      <div class="chips" style="margin:12px 0 0" id="lkSearch"></div>
-      <p class="msg" id="lkMsg"></p>
-    </div>
-    <div class="sec"><h2>Modes</h2></div>
-    <div class="grid mode" id="modeGrid"></div>
-    <p class="empty" id="noModes">A mode opens several links at once. Add one at the bottom.</p>
-    <div class="sec"><h2>Saved links</h2></div>
-    <div class="grid" id="linkGrid"></div>
-    <p class="empty" id="noLinks">No saved links yet. Add some at the bottom.</p>
-    <div class="sec"><h2>Recent</h2></div>
-    <ul class="list" id="recent"></ul>
-    <details>
-      <summary>Edit links and modes</summary>
-      <div class="panel">
-        <label>Saved links</label><div id="lkRows"></div>
-        <button class="btn ghost" id="addLk">Add link</button>
-        <label style="margin-top:18px">Modes</label><div id="mdRows"></div>
-        <button class="btn ghost" id="addMd">Add mode</button>
-      </div>
-      <button class="btn" id="lkSave">Save links</button>
-      <p class="msg" id="lkSaveMsg"></p>
-    </details>
-  </section>
-
-  <section class="view" id="pc" hidden>
-    <div class="sec"><h2>PC script</h2></div>
-    <div class="panel">
-      <p class="msg" id="pcState" style="margin:0 0 12px"></p>
-      <div class="row"><button class="btn ghost" id="conBtn">Show console</button><button class="btn ghost" id="restartBtn">Restart script</button></div>
-      <pre id="con" hidden></pre>
-      <p class="msg" id="conMsg"></p>
-    </div>
-    <div class="sec"><h2>Screenshot</h2></div>
-    <div class="panel">
+  <!-- SHARE -->
+  <section class="view" id="share" hidden>
+    <div class="card">
+      <div class="cardhead"><h3>PC screenshot</h3></div>
       <div class="row f">
-        <div><label for="mon">Screen</label>
-          <select id="mon"><option value="0">All screens</option><option value="1">Screen 1</option><option value="2">Screen 2</option></select></div>
-        <div><label for="dly">Delay</label>
-          <select id="dly"><option value="0">None</option><option value="3">3 seconds</option><option value="5">5 seconds</option></select></div>
+        <div><label for="mon">Screen</label><select id="mon"><option value="0">All screens</option><option value="1">Screen 1</option><option value="2">Screen 2</option></select></div>
+        <div><label for="dly">Delay</label><select id="dly"><option value="0">None</option><option value="3">3 seconds</option><option value="5">5 seconds</option></select></div>
       </div>
       <button class="btn" id="shotGo">Take screenshot</button>
       <div class="row" style="margin-top:8px"><button class="btn ghost" id="liveBtn">Live view</button><button class="btn ghost" id="shotSave">Save to gallery</button></div>
       <div id="shotBox" hidden><img id="shotImg" alt="Latest screenshot"><div class="gal" id="gal"></div></div>
-      <p class="msg" id="shMsg"></p>
     </div>
-    <div class="sec"><h2>Send to PC</h2></div>
-    <div class="panel">
-      <label>Photo</label>
-      <p class="hint">Saved in the Phone_Photos folder next to pc_remote.py.</p>
-      <input id="photo" type="file" accept="image/*">
+    <div class="card">
+      <div class="cardhead"><h3>Open on PC</h3></div>
+      <div class="f"><input id="lkIn" type="text" inputmode="url" placeholder="Paste a link or type a search" autocapitalize="off"></div>
+      <button class="btn" id="lkGo">Open on PC</button>
+      <div class="chips" style="margin:12px 0 0" id="lkSearch"></div>
     </div>
-    <div class="panel">
-      <label for="clipText">Text for the PC clipboard</label>
+    <div class="cardhead" style="margin:6px 4px 8px"><h3>Modes</h3></div>
+    <div class="grid hot" id="modeGrid"></div><p class="empty" id="noModes">A mode opens several links at once.</p>
+    <div class="cardhead" style="margin:6px 4px 8px"><h3>Saved links</h3></div>
+    <div class="grid" id="linkGrid"></div><p class="empty" id="noLinks">No saved links yet.</p>
+    <div class="card">
+      <div class="cardhead"><h3>Recent links</h3></div><ul class="list" id="recent"></ul>
+      <details><summary>Edit links and modes</summary>
+        <label>Saved links</label><div id="lkRows"></div><button class="btn ghost" id="addLk">Add link</button>
+        <label style="margin-top:16px">Modes</label><div id="mdRows"></div><button class="btn ghost" id="addMd">Add mode</button>
+        <button class="btn" id="lkSave" style="margin-top:8px">Save links</button>
+      </details>
+    </div>
+    <div class="card">
+      <div class="cardhead"><h3>Send to PC</h3></div>
+      <label>Photo</label><p class="hint">Saved in the Phone_Photos folder next to start.py.</p><input id="photo" type="file" accept="image/*">
+      <label for="clipText" style="margin-top:16px">Text for the PC clipboard</label>
       <div class="f"><textarea id="clipText" placeholder="Paste a link or some text"></textarea></div>
       <button class="btn" id="clipSend">Send to PC</button>
     </div>
-    <p class="msg" id="sdMsg"></p>
+  </section>
+
+  <!-- MORE -->
+  <section class="view" id="more" hidden><div class="menu" id="menu"></div></section>
+
+  <section class="view" id="inbox" hidden>
+    <div class="subhead"><button class="back" data-go="more">&#8249;</button><h2>Inbox</h2><button class="chip x" id="clear" style="margin-left:auto">Clear</button></div>
+    <ul class="list" id="list"></ul><p class="empty" id="empty">Nothing yet. Alerts from your scripts land here.</p>
+    <details><summary>Send an alert to this phone</summary>
+      <div class="card">
+        <div class="seg" id="types"><button data-t="info" aria-pressed="true">Info</button><button data-t="warn" aria-pressed="false">Warning</button><button data-t="error" aria-pressed="false">Error</button></div>
+        <div class="f"><label for="title">Title</label><input id="title" type="text" value="Alert"></div>
+        <div class="f"><label for="text">Message</label><textarea id="text"></textarea></div>
+        <label class="check f"><input id="speak" type="checkbox" checked> Read it aloud</label>
+        <button class="btn" id="sendBtn">Send</button>
+      </div>
+    </details>
+  </section>
+
+  <section class="view" id="susie" hidden>
+    <div class="subhead"><button class="back" data-go="more">&#8249;</button><h2>Susie</h2><button class="chip x" id="chatClear" style="margin-left:auto">New chat</button></div>
+    <div id="chat"></div>
+    <div class="card"><div class="row"><input id="chatIn" type="text" placeholder="Say something"><button class="btn x sm" id="chatGo">Send</button></div>
+      <label class="check" style="margin-top:12px"><input id="chatSpeak" type="checkbox"> Read replies aloud</label></div>
+  </section>
+
+  <section class="view" id="auto" hidden>
+    <div class="subhead"><button class="back" data-go="more">&#8249;</button><h2>Automations</h2></div>
+    <p class="hint">When something happens, run an action. Actions are the same commands as the Stage buttons (see Help).</p>
+    <div class="card">
+      <label class="check f"><input id="motionOn" type="checkbox"> Watch phone motion (face-down, picked up, shake), even with the screen off</label>
+      <div class="chips" id="rpre2"></div>
+      <div id="ruleRows"></div>
+      <button class="btn ghost" id="addRule">Add automation</button>
+      <button class="btn" id="ruleSave" style="margin-top:8px">Save automations</button>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:10px">Away lock</h3>
+      <label class="check f"><input id="awayOn" type="checkbox"> Lock my PC when this phone leaves the Wi-Fi</label>
+      <div class="f"><label for="awayMin">After how many minutes</label><input id="awayMin" type="number" min="1" value="3"></div>
+      <button class="btn" id="awaySave">Save</button>
+    </div>
+  </section>
+
+  <section class="view" id="voice" hidden>
+    <div class="subhead"><button class="back" data-go="more">&#8249;</button><h2>Voice commands</h2></div>
+    <div class="card">
+      <label class="check f"><input id="voiceOn" type="checkbox"> Always listening for my phrases</label>
+      <div class="f"><label for="voiceLang">Language</label><select id="voiceLang"><option value="en-US">English</option><option value="ar-IQ">Arabic (Iraq)</option><option value="ar-SA">Arabic</option></select></div>
+      <p class="hint">Say a phrase exactly as written and its action runs. Start an action with input: to press keys, like input:media next.</p>
+      <div class="chips" id="vpre"></div><div id="vRows"></div>
+      <button class="btn ghost" id="addVoice">Add phrase</button>
+      <button class="btn" id="voiceSave" style="margin-top:8px">Save and apply</button>
+    </div>
   </section>
 
   <section class="view" id="plan" hidden>
-    <div class="sec"><h2>Focus</h2></div>
-    <p class="hint">Start a timer and put the phone down. It speaks when time is up.</p>
-    <div class="grid" id="fpre"></div>
-    <div class="panel">
+    <div class="subhead"><button class="back" data-go="more">&#8249;</button><h2>Plan</h2></div>
+    <div class="card"><div class="cardhead"><h3>Focus</h3></div><p class="hint">Start a timer and put the phone down. It speaks when time is up.</p>
+      <div class="grid" id="fpre"></div>
       <div class="f"><label for="fText">Timer for</label><input id="fText" type="text" placeholder="Series script"></div>
-      <div class="row"><input id="fMin" type="number" min="1" value="30"><button class="btn" id="fGo">Start timer</button></div>
-      <p class="msg" id="fMsg"></p>
-    </div>
-    <div class="sec"><h2>Deadlines</h2></div>
-    <div class="panel"><div id="dlCards"></div><div id="dlRows"></div>
-      <button class="btn ghost" id="addDl">Add deadline</button></div>
-    <div class="sec"><h2>Reminders</h2></div>
-    <p class="hint">Leave "Every" at 0 to repeat daily at a set time.</p>
-    <div class="panel">
-      <div class="chips" id="rpre"></div>
-      <div id="remRows"></div>
-      <button class="btn ghost" id="addRem">Add reminder</button>
-    </div>
+      <div class="row"><input id="fMin" type="number" min="1" value="30"><button class="btn" id="fGo">Start timer</button></div></div>
+    <div class="card"><div class="cardhead"><h3>Deadlines</h3></div><div id="dlCards"></div><div id="dlRows"></div><button class="btn ghost" id="addDl">Add deadline</button></div>
+    <div class="card"><div class="cardhead"><h3>Reminders</h3></div><p class="hint">Leave "Every" at 0 to repeat daily at a set time.</p>
+      <div class="chips" id="rpre"></div><div id="remRows"></div><button class="btn ghost" id="addRem">Add reminder</button></div>
     <button class="btn" id="planSave">Save plan</button>
-    <p class="msg" id="planMsg"></p>
   </section>
 
-  <section class="view" id="setup" hidden>
-    <div class="sec"><h2>Setup</h2></div>
-    <div class="panel">
-      <div class="f"><label for="pc">PC address</label>
-        <input id="pc" type="text" placeholder="Leave empty to find it automatically"></div>
-      <label>Stage buttons</label>
-      <div id="rows"></div>
-      <button class="btn ghost" id="addRow">Add button</button>
+  <section class="view" id="settings" hidden>
+    <div class="subhead"><button class="back" data-go="more">&#8249;</button><h2>Settings</h2></div>
+    <div class="card"><h3 style="margin-bottom:10px">Look</h3><div class="sw" id="sw"></div></div>
+    <div class="card">
+      <h3 style="margin-bottom:10px">PC and stage buttons</h3>
+      <div class="f"><label for="pc">PC address</label><input id="pc" type="text" placeholder="Leave empty to find it automatically"></div>
+      <label>Stage buttons</label><div id="rows"></div><button class="btn ghost" id="addRow">Add button</button>
     </div>
-
-    <div class="sec"><h2>Wake-on-LAN</h2></div>
-    <div class="panel">
-      <p class="hint">Used by the "Wake the PC now" button and by auto-wake. Find your MAC with <code>ipconfig /all</code> on the PC — look for "Physical Address" under your Ethernet or Wi-Fi adapter.</p>
-      <div class="f"><label for="wolMac">PC MAC address</label>
-        <input id="wolMac" type="text" placeholder="AA:BB:CC:DD:EE:FF"></div>
-      <div class="f"><label for="wolDelay">Auto-wake after (minutes of PC missing)</label>
-        <input id="wolDelay" type="number" min="1" value="5"></div>
-    </div>
-
-    <div class="sec"><h2>Battery</h2></div>
-    <div class="panel">
-      <p class="hint">The app holds a wake lock so it can keep listening for your PC. Below this battery level (and not charging), it releases the lock to save power.</p>
-      <div class="f"><label for="battThresh">Release wake lock below (%)</label>
-        <input id="battThresh" type="number" min="1" max="99" value="15"></div>
-    </div>
-
-    <div class="sec"><h2>Voice commands</h2></div>
-    <div class="panel">
-      <label class="check f"><input id="voiceOn" type="checkbox"> Always listening for my phrases</label>
-      <div class="f"><label for="voiceLang">Language</label>
-        <select id="voiceLang"><option value="en-US">English</option><option value="ar-IQ">Arabic (Iraq)</option><option value="ar-SA">Arabic</option></select></div>
-      <p class="hint">Say a phrase exactly as written and its action runs. Actions are the same commands as the Stage buttons. Start one with input: to press keys, like input:media next.</p>
-      <div class="chips" id="vpre"></div>
-      <div id="vRows"></div>
-      <button class="btn ghost" id="addVoice">Add phrase</button>
-      <button class="btn" id="voiceSave" style="margin-top:10px">Save and apply</button>
-      <p class="msg" id="voiceMsg"></p>
-    </div>
-    <div class="sec"><h2>Connection sound</h2></div>
-    <div class="panel">
-      <p class="hint">Plays on the phone and the PC when they find each other. Phone: put meet.mp3 (and optionally leave.mp3) in app/src/main/res/raw in the repo. PC: put meet.wav, meet.mp3 or meet.ogg next to pc_remote.py.</p>
-      <div class="row"><button class="btn ghost" id="cuePhone">Test on phone</button><button class="btn ghost" id="cuePc">Test on PC</button></div>
-      <p class="msg" id="cueMsg"></p>
-    </div>
-    <div class="panel">
-      <h2>Voice, quiet hours and PIN</h2>
-      <div class="row f" style="margin-top:12px">
-        <div><label for="vLang">Voice language</label>
-          <select id="vLang"><option value="">Phone default</option><option value="en">English</option><option value="ar">Arabic</option></select></div>
-        <div><label for="vRate">Speed</label><input id="vRate" type="number" min="0.5" max="2" step="0.1" value="1"></div>
-      </div>
+    <div class="card">
+      <h3 style="margin-bottom:10px">Voice, quiet hours and PIN</h3>
+      <div class="row f"><div><label for="vLang">Voice language</label><select id="vLang"><option value="">Phone default</option><option value="en">English</option><option value="ar">Arabic</option></select></div>
+        <div><label for="vRate">Speed</label><input id="vRate" type="number" min="0.5" max="2" step="0.1" value="1"></div></div>
       <label class="check f"><input id="qOn" type="checkbox"> Quiet hours: no sound or speech, errors still ring</label>
       <div class="row f"><input id="qFrom" type="time" value="23:00"><input id="qTo" type="time" value="07:00"></div>
-      <div class="f"><label for="pinNew">PIN lock for the app and the PC page</label>
-        <input id="pinNew" type="password" inputmode="numeric" placeholder="New PIN"></div>
+      <div class="f"><label for="pinNew">PIN lock for the app and the PC page</label><input id="pinNew" type="password" inputmode="numeric" placeholder="New PIN"></div>
       <button class="btn ghost" id="pinOff" hidden>Remove PIN</button>
     </div>
-    <button class="btn" id="setSave">Save setup</button>
-    <p class="msg" id="setMsg"></p>
+    <div class="card">
+      <h3 style="margin-bottom:10px">Connection sound</h3>
+      <p class="hint">Plays on both when they find each other. Phone: meet.mp3 in app/src/main/res/raw. PC: meet.wav next to start.py.</p>
+      <div class="row"><button class="btn ghost" id="cuePhone">Test on phone</button><button class="btn ghost" id="cuePc">Test on PC</button></div>
+    </div>
+    <button class="btn" id="setSave">Save settings</button>
+  </section>
+
+  <section class="view" id="pcscript" hidden>
+    <div class="subhead"><button class="back" data-go="more">&#8249;</button><h2>PC script</h2></div>
+    <div class="card">
+      <p class="muted" id="pcState2" style="margin:0 0 12px"></p>
+      <div class="row"><button class="btn ghost" id="conBtn">Show console</button><button class="btn ghost" id="restartBtn">Restart script</button></div>
+      <pre id="con" hidden></pre>
+    </div>
+  </section>
+
+  <section class="view help" id="help" hidden>
+    <div class="subhead"><button class="back" data-go="more">&#8249;</button><h2>Help</h2></div>
+    <div class="card"><h3>The command bar (Home)</h3>
+      <p><code>screenshot</code> <code>lock</code> <code>sleep</code> <code>volume 30</code> <code>mute</code> <code>pause</code> <code>next</code> <code>previous</code></p>
+      <p><code>open youtube.com</code> <code>search cats</code> <code>youtube lofi</code> <code>shutdown 30</code> <code>timer 25</code> <code>scene Work</code> <code>type hello</code></p></div>
+    <div class="card"><h3>Actions (buttons, voice, scenes, automations)</h3>
+      <p><code>screenshot</code> <code>scene:Name</code> <code>notify:text</code> <code>restart</code></p>
+      <p><code>power:lock</code> <code>power:sleep</code> <code>power:screenoff</code> <code>power:restart</code> <code>power:shutdown:30</code> <code>power:cancel</code></p>
+      <p><code>input:media playpause</code> <code>input:media next</code> <code>input:vol 40</code> <code>input:mute</code> <code>input:type hello</code> <code>input:key enter</code> <code>input:combo ctrl+c</code></p>
+      <p><code>open:C:\path\file.toe</code> <code>run:notepad</code> <code>url:https://...</code> <code>kill:Name.exe</code></p>
+      <p><code>play:C:\sound.wav</code> <code>stopsound</code> <code>cue:meet</code></p>
+      <p class="muted">Add your own in my_actions.py on the PC with @action("name").</p></div>
+    <div class="card"><h3>Scene steps</h3><p>One action per line. <code>wait:2</code> pauses two seconds. Lines starting with # are ignored.</p></div>
+    <div class="card"><h3>Quick Settings tiles</h3><p>Swipe down twice, tap the pencil, and drag in "PC screenshot", "PC play / pause" and "Lock PC".</p></div>
   </section>
 </main>
-
-<nav>
-  <button data-v="inbox" aria-current="true"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l1 3h6l1-3h5"/></svg></span>Inbox</button>
-  <button data-v="stage" aria-current="false"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></span>Stage</button>
-  <button data-v="remote" aria-current="false"><span class="ic"><svg viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 3v6"/></svg></span>Remote</button>
-  <button data-v="susie" aria-current="false"><span class="ic"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.2A8 8 0 1121 12z"/></svg></span>Susie</button>
-  <button data-v="links" aria-current="false"><span class="ic"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg></span>Links</button>
-  <button data-v="pc" aria-current="false"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></span>PC</button>
-  <button data-v="plan" aria-current="false"><span class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></span>Plan</button>
-  <button data-v="setup" aria-current="false"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg></span>Setup</button>
-</nav>
+<nav id="nav"></nav>
 
 <script>
-const $ = s => document.querySelector(s);
+/* ============ 1. basics ============ */
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x) e.textContent = x; return e; };
 const pinv = () => sessionStorage.getItem("pin") || "";
 const chk = r => { if (r.locked) { $("#lock").hidden = false; throw new Error("locked"); } return r; };
@@ -454,538 +410,452 @@ const api = (u, o) => {
                 : fetch(u + (u.includes("?") ? "&" : "?") + "pin=" + encodeURIComponent(pin));
   return req.then(r => r.json()).then(chk);
 };
-const say = (id, t, bad) => { const e = $(id); e.textContent = t; e.className = "msg " + (bad ? "bad" : "ok"); };
-const imgUrl = n => "/shots/" + n + "?pin=" + encodeURIComponent(pinv());
-let conT = null, S = null, cmds = [], rems = [], dls = [], links = [], modes = [], type = "info", cue = 0, sel = null, shotKey = "", liveT = null;
+let toastT;
+function toast(t, bad) { const e = $("#toast"); e.textContent = t; e.className = "show" + (bad ? " bad" : ""); clearTimeout(toastT); toastT = setTimeout(() => e.className = "", 2600); }
+document.addEventListener("click", e => {
+  if (e.target.closest("button") && navigator.vibrate) navigator.vibrate(8);
+  const g = e.target.closest("[data-go]"); if (g) go(g.dataset.go);
+});
+const IC = {
+  home: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
+  control: '<rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 3v6"/>',
+  stage: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+  share: '<path d="M4 12l16-8-6 16-3-7z"/>',
+  more: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
+  shot: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.5"/>',
+  lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/>',
+  play: '<path d="M8 5v14l11-7z"/>', pause: '<path d="M8 5v14M16 5v14"/>',
+  next: '<path d="M6 5v14l9-7zM18 5v14"/>', prev: '<path d="M18 5v14l-9-7zM6 5v14"/>',
+  mute: '<path d="M4 9v6h4l5 4V5L8 9zM17 9l4 6M21 9l-4 6"/>',
+  power: '<path d="M12 3v9M7 6a8 8 0 1010 0"/>',
+  mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>',
+  timer: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/>',
+  link: '<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/>',
+  chat: '<path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.2A8 8 0 1121 12z"/>',
+  bolt: '<path d="M13 2L5 14h6l-1 8 8-12h-6z"/>',
+  cal: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>',
+  term: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/>',
+  help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 115 0c0 1.7-2.5 2-2.5 4M12 17h.01"/>',
+  inbox: '<path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l1 3h6l1-3h5"/>'
+};
+const ico = n => `<svg class="i" viewBox="0 0 24 24">${IC[n]}</svg>`;
+const rawIco = n => `<svg viewBox="0 0 24 24">${IC[n]}</svg>`;
+let S = null, cmds = [], rems = [], dls = [], links = [], modes = [], pads = [], snds = [], voice = [], scenes = [], rules = [];
+let type = "info", cue = 0, sel = null, shotKey = "", liveT = null, conT = null, pcLoaded = false, procMode = "watch", volBusy = 0, lastVol = 0, M = {};
 
-function view(v) {
-  if (v !== "pc" && liveT) $("#liveBtn").click();
-  if (v !== "pc" && conT) $("#conBtn").click();
-  document.querySelectorAll(".view").forEach(e => e.hidden = e.id !== v);
-  document.querySelectorAll("nav button").forEach(b => b.setAttribute("aria-current", b.dataset.v === v));
+/* ============ 2. look and navigation ============ */
+const TABS = { home: ["Home", "#8b5cff", "#ff3da6"], control: ["Control", "#2bd9ff", "#5c7cff"], stage: ["Stage", "#2ee59d", "#2bd9ff"],
+               share: ["Share", "#ff3da6", "#ffb347"], more: ["More", "#ffb347", "#ff5d6c"] };
+const SUBS = { inbox: "Inbox", susie: "Susie", auto: "Automations", voice: "Voice commands", plan: "Plan", settings: "Settings", pcscript: "PC script", help: "Help" };
+let accent = null; try { accent = JSON.parse(localStorage.getItem("accent") || "null"); } catch (e) {}
+$("#nav").innerHTML = Object.entries(TABS).map(([id, t]) => `<button data-go="${id}" data-v="${id}" aria-current="false"><span class="ic">${rawIco(id)}</span>${t[0]}</button>`).join("");
+function go(id) {
+  if (liveT && id !== "share") $("#liveBtn").click();
+  if (conT && id !== "pcscript") $("#conBtn").click();
+  const tab = SUBS[id] ? "more" : id, t = TABS[tab], r = document.documentElement.style;
+  $$(".view").forEach(v => v.hidden = v.id !== id);
+  $$("#nav button").forEach(b => b.setAttribute("aria-current", b.dataset.v === tab));
+  const a = accent ? accent[0] : t[1], b = accent ? accent[1] : t[2];
+  r.setProperty("--acc", a); r.setProperty("--acc2", b); r.setProperty("--glow", a + "55");
+  $("#pageTitle").textContent = SUBS[id] || t[0];
   window.scrollTo(0, 0);
-  if (v === "remote") { loadProcs().catch(() => {}); loadAway().catch(() => {}); loadMedia().catch(() => {}); }
+  if (id === "control") loadProcs().catch(() => {});
+  if (id === "home") loadMedia().catch(() => {});
+  if (id === "inbox" && S) renderAlerts();
+  if (id === "auto" || id === "stage") loadPcSettings().catch(() => {});
 }
-document.querySelectorAll("nav button").forEach(b => b.onclick = () => view(b.dataset.v));
+const hour = new Date().getHours();
+$("#hello").textContent = (hour < 5 ? "Still up" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening") + ", Ten";
+$("#menu").innerHTML = [["inbox", "inbox", "Inbox", "Alerts from your scripts"], ["chat", "susie", "Susie", "Chat with your local model"],
+  ["bolt", "auto", "Automations", "When this happens, do that"], ["mic", "voice", "Voice commands", "Always-listening phrases"],
+  ["cal", "plan", "Plan", "Focus, deadlines, reminders"], ["gear", "settings", "Settings", "Look, buttons, PIN, sounds"],
+  ["term", "pcscript", "PC script", "Console and restart"], ["help", "help", "Help", "Every command in one place"]]
+  .map(([i, id, t, s]) => `<button class="mrow" data-go="${id}"><span class="ic">${rawIco(i)}</span><span><b>${t}</b><small>${s}</small></span><span class="go2">&#8250;</span></button>`).join("");
+const SWATCHES = [["#8b5cff", "#ff3da6"], ["#2bd9ff", "#5c7cff"], ["#2ee59d", "#2bd9ff"], ["#ff3da6", "#ffb347"], ["#ffb347", "#ff5d6c"], ["#ffffff", "#8d8da3"]];
+const auto = el("button", "chip", "Auto"); auto.onclick = () => { accent = null; try { localStorage.removeItem("accent"); } catch (e) {} go("settings"); toast("Colors follow the section"); };
+$("#sw").append(auto);
+SWATCHES.forEach(p => { const b = el("button"); b.style.background = `linear-gradient(135deg,${p[0]},${p[1]})`; b.onclick = () => { accent = p; try { localStorage.setItem("accent", JSON.stringify(p)); } catch (e) {} go("settings"); }; $("#sw").append(b); });
 
+/* ============ 3. shared helpers ============ */
 function editor(box, arr, fields, wrap, after) {
   box.replaceChildren();
   arr.forEach((it, i) => {
     const row = el("div", "row f" + (wrap ? " wrap" : ""));
     fields.forEach(([k, ph, t]) => {
       const inp = el("input"); inp.type = t || "text"; inp.placeholder = ph; inp.value = it[k] ?? "";
-      inp.oninput = () => it[k] = t === "number" ? Number(inp.value) : inp.value;
-      row.append(inp);
+      inp.oninput = () => it[k] = t === "number" ? Number(inp.value) : inp.value; row.append(inp);
     });
     const x = el("button", "chip x", "Remove");
     x.onclick = () => { arr.splice(i, 1); editor(box, arr, fields, wrap, after); if (after) after(); };
     row.append(x); box.append(row);
   });
 }
-const CF = [["label", "Button name"], ["cmd", "Command"]];
-const RF = [["text", "What should it say?"], ["every", "Every (min)", "number"], ["at", "Daily at", "time"]];
-const DF = [["name", "Deadline"], ["date", "", "date"]];
-const LF = [["label", "Name"], ["url", "https://..."]];
-const MF = [["name", "Mode name"], ["urls", "Links, separated by spaces"]];
+async function run(c, quiet) {
+  let ok = true, msg = "Done";
+  if (c.startsWith("input:")) await api("/api/input", { msg: c.slice(6) });
+  else { const r = await api("/api/command", { cmd: c }); ok = r.msg === "Sent."; msg = ok ? "Done" : r.msg; }
+  if (!quiet) toast(msg, !ok);
+  return ok;
+}
+const inp = m => fetch("/api/input", { method: "POST", body: new URLSearchParams({ msg: m, pin: pinv() }) }).catch(() => {});
+const armed = (b, label, fn) => { let a = false; b.onclick = () => { if (!a) { a = true; b.textContent = "Tap again"; setTimeout(() => { a = false; b.textContent = label; }, 3000); return; } a = false; b.textContent = label; fn(); }; };
+const pcSet = (name, value) => api("/api/pcset", { name, value });
+const atTime = m => new Date(Date.now() + m * 6e4).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+async function focus(m, br) {
+  await api("/api/timer", { minutes: m, text: br ? "Focus block done. Take a break." : "Time is up." });
+  if (br) await api("/api/timer", { minutes: m + br, text: "Break over. Back to it." });
+  toast("Started. I will tell you at " + atTime(m));
+}
+async function openOnPc(text) {
+  const r = await api("/api/open", { url: text });
+  toast(r.msg === "Sent." ? "Opening on your PC" : r.msg, r.msg !== "Sent."); load();
+}
+async function wake() { const r = await api("/api/wake", {}); toast(r.msg, !r.msg.startsWith("Wake")); }
+async function applyVoice(on) {
+  if (on && window.Android && !Android.hasMic()) { Android.askMic(); return toast("Allow the microphone, then try again", true); }
+  const r = await api("/api/voiceset", { on: on ? "1" : "0", lang: $("#voiceLang").value });
+  toast(r.msg === "ok" ? (on ? "Listening" : "Stopped listening") : r.msg, r.msg !== "ok"); $("#voiceOn").checked = on && r.msg === "ok"; load();
+}
 
-function renderInbox() {
-  const ul = $("#list"); ul.replaceChildren();
-  $("#empty").hidden = S.history.length > 0;
-  S.history.forEach(h => {
-    const li = el("li", h.type);
-    li.append(el("b", "", h.title), el("p", "", h.text));
-    if (h.img) { const im = el("img"); im.src = imgUrl(h.img); im.loading = "lazy"; li.append(im); }
-    li.append(el("small", "", new Date(h.t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })));
-    ul.append(li);
+/* ============ 4. loading state from the phone ============ */
+async function load(first) {
+  try { S = await api("/api/state"); $("#live").classList.add("on"); } catch (e) { $("#live").classList.remove("on"); return; }
+  $("#pcLive").classList.toggle("on", !!S.pcOnline);
+  renderAlerts(); renderAsks(); renderSparks(); renderShots(); renderLinks(); renderQuick();
+  if (first) {
+    cmds = S.commands; rems = S.reminders; dls = S.deadlines; links = S.links; modes = S.modes; pads = S.pads; snds = S.sounds; voice = S.voice;
+    $("#pc").value = S.pc; $("#voiceOn").checked = S.voiceOn; $("#voiceLang").value = S.voiceLang; $("#motionOn").checked = S.motionOn;
+    const P = S.prefs; $("#qOn").checked = P.q_on; $("#qFrom").value = P.q_from; $("#qTo").value = P.q_to; $("#vLang").value = P.tts_lang; $("#vRate").value = P.tts_rate; $("#pinOff").hidden = !P.pin;
+    editor($("#rows"), cmds, CF); editor($("#remRows"), rems, RF, true); editor($("#dlRows"), dls, DF, false, renderDls);
+    editor($("#lkRows"), links, LF, false, renderLinks); editor($("#mdRows"), modes, MF, false, renderLinks);
+    editor($("#padRows"), pads, PF, true, renderPads); editor($("#sndRows"), snds, SF, false, renderSounds); editor($("#vRows"), voice, VF);
+    renderRemote(); renderDls(); renderPads(); renderSounds();
+  }
+  if (S.pcOnline && !pcLoaded) loadPcSettings().catch(() => {});
+}
+async function loadPcSettings() {
+  const r = await api("/api/pcget"); if (!r || !("rules" in r)) return;
+  pcLoaded = true; scenes = r.scenes || []; rules = r.rules || [];
+  $("#awakeOn").checked = !!r.keep_awake; $("#awayOn").checked = !!r.lock_away; $("#awayMin").value = r.away_min || 3;
+  sceneEditor(); renderScenes(); ruleEditor();
+}
+async function loadMedia() {
+  if (!S || !S.pcOnline) return;
+  M = await api("/api/media");
+  $("#npTitle").textContent = M.title || "Nothing playing"; $("#npArtist").textContent = M.artist || "";
+  $("#npPlay").innerHTML = rawIco(M.playing ? "pause" : "play");
+  if (M.volume !== undefined) { $("#volOut").textContent = M.volume + "%" + (M.muted ? " (muted)" : ""); if (Date.now() - volBusy > 3000) $("#vol").value = M.volume; }
+}
+
+/* ============ 5. HOME ============ */
+const QUICK = [["shot", "Screenshot", () => run("screenshot")], ["lock", "Lock PC", () => run("power:lock")], ["play", "Play / pause", () => run("input:media playpause")],
+  ["mute", "Mute", () => run("input:mute")], ["power", "Wake PC", wake], ["mic", "Voice", () => applyVoice(!(S && S.voiceOn))],
+  ["timer", "Focus 25", () => focus(25, 5)], ["link", "Send link", () => go("share")]];
+function renderQuick() {
+  const box = $("#quick"); if (!box.children.length) QUICK.forEach(([i, l, fn]) => { const b = el("button", "q"); b.innerHTML = ico(i) + l; b.onclick = fn; box.append(b); });
+  box.children[5].classList.toggle("on", !!S.voiceOn);
+}
+$("#disc").innerHTML = rawIco("play"); $("#npPrev").innerHTML = rawIco("prev"); $("#npNext").innerHTML = rawIco("next"); $("#npPlay").innerHTML = rawIco("play");
+const mediaKey = k => { inp("media " + k); setTimeout(() => loadMedia().catch(() => {}), 700); };
+$("#npPrev").onclick = () => mediaKey("prev"); $("#npNext").onclick = () => mediaKey("next"); $("#npPlay").onclick = () => mediaKey("playpause");
+$("#vol").oninput = () => { volBusy = Date.now(); $("#volOut").textContent = $("#vol").value + "%"; if (Date.now() - lastVol > 120) { lastVol = Date.now(); inp("vol " + $("#vol").value); } };
+$("#vol").onchange = () => inp("vol " + $("#vol").value);
+
+const SPK = [["cpu", "CPU", "%"], ["ram", "RAM", "%"], ["gpu", "GPU", "\u00b0"], ["disk", "Disk", "%"]], HIST = { cpu: [], ram: [], gpu: [], disk: [] };
+function drawSpark(c, data) {
+  const k = devicePixelRatio || 1, w = c.clientWidth * k, h = 34 * k; if (!w) return; c.width = w; c.height = h;
+  const g = c.getContext("2d"); g.clearRect(0, 0, w, h); if (data.length < 2) return;
+  g.lineWidth = 2 * k; g.lineJoin = "round"; g.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--acc").trim() || "#8b5cff";
+  g.beginPath(); data.forEach((v, i) => { const x = i / 39 * w, y = h - Math.min(v, 100) / 100 * (h - 6) - 3; i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke();
+}
+function renderSparks() {
+  const fresh = S.statsAge < 20000, box = $("#sparks");
+  $("#pcState").textContent = fresh ? "Online" : S.pcOnline ? "Connected" : "Offline"; $("#pcState2").textContent = fresh ? "The PC script is running." : S.pcOnline ? "Connected, but no stats yet (needs psutil)." : "The PC script isn't answering. It may be off.";
+  if (!box.children.length) SPK.forEach(([k, l]) => { const d = el("div", "spark"); d.innerHTML = `<b id="sv_${k}">-</b><span>${l}</span><canvas id="sc_${k}"></canvas>`; box.append(d); });
+  SPK.forEach(([k, l, u]) => {
+    const v = fresh ? Number(S.stats[k]) : NaN;
+    if (!isNaN(v)) { const h = HIST[k]; h.push(v); if (h.length > 40) h.shift(); }
+    $("#sv_" + k).textContent = isNaN(v) ? "-" : v + u; drawSpark($("#sc_" + k), HIST[k]);
   });
+}
+function alertItem(h) {
+  const li = el("li", h.type); li.append(el("b", "", h.title), el("p", "", h.text));
+  if (h.img) { const im = el("img"); im.src = imgUrl(h.img); im.loading = "lazy"; li.append(im); }
+  li.append(el("small", "", new Date(h.t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))); return li;
+}
+function renderAlerts() {
+  const a = $("#recentAlerts"), l = $("#list"); a.replaceChildren(); l.replaceChildren();
+  $("#noAlerts").hidden = S.history.length > 0; $("#empty").hidden = S.history.length > 0;
+  S.history.slice(0, 3).forEach(h => a.append(alertItem(h)));
+  if (!$("#inbox").hidden) S.history.forEach(h => l.append(alertItem(h)));
 }
 function renderAsks() {
   const box = $("#asks"); box.replaceChildren();
   S.asks.forEach(a => {
-    const p = el("div", "panel"), row = el("div", "row");
-    a.options.forEach(o => {
-      const b = el("button", "btn", o);
-      b.onclick = async () => { await api("/api/answer", { id: a.id, answer: o }); load(false); };
-      row.append(b);
-    });
-    p.append(el("b", "", a.title), el("p", "", a.text), row); box.append(p);
+    const c = el("div", "card"), row = el("div", "row");
+    a.options.forEach(o => { const b = el("button", "btn", o); b.onclick = async () => { await api("/api/answer", { id: a.id, answer: o }); load(false); }; row.append(b); });
+    c.append(el("b", "", a.title), el("p", "", a.text), row); box.append(c);
   });
 }
-function renderRemote() {
-  const g = $("#cmds"); g.replaceChildren();
-  $("#noCmds").hidden = cmds.length > 0; renderCue();
-  cmds.forEach(c => {
-    const b = el("button", "", c.label || c.cmd);
-    b.onclick = async () => { const r = await api("/api/command", { cmd: c.cmd }); say("#cMsg", r.msg, r.msg !== "Sent."); };
-    g.append(b);
-  });
+function parseCommand(t) {
+  const s = t.trim(), l = s.toLowerCase(); let m;
+  if (/^screen ?shot$/.test(l)) return { cmd: "screenshot" };
+  if (/^lock( pc| computer)?$/.test(l)) return { cmd: "power:lock" };
+  if (l === "sleep") return { cmd: "power:sleep" };
+  if ((m = l.match(/^shut ?down(?: in)? (\d+)/))) return { cmd: "power:shutdown:" + m[1] };
+  if (/^cancel shut ?down$/.test(l)) return { cmd: "power:cancel" };
+  if ((m = l.match(/^volume (?:to )?(\d{1,3})$/))) return { cmd: "input:vol " + Math.min(100, +m[1]) };
+  if (/^(mute|unmute)$/.test(l)) return { cmd: "input:mute" };
+  if (/^(play|pause|play pause|play\/pause)$/.test(l)) return { cmd: "input:media playpause" };
+  if (/^(next|skip)( song| track)?$/.test(l)) return { cmd: "input:media next" };
+  if (/^(previous|prev|back)( song| track)?$/.test(l)) return { cmd: "input:media prev" };
+  if (/^type .+/.test(l)) return { cmd: "input:type " + s.slice(5) };
+  if ((m = s.match(/^scene (.+)/i))) return { cmd: "scene:" + m[1] };
+  if ((m = l.match(/^timer (\d+)/))) return { timer: +m[1] };
+  if ((m = s.match(/^(?:youtube|yt) (.+)/i))) return { open: "https://www.youtube.com/results?search_query=" + encodeURIComponent(m[1]) };
+  if ((m = s.match(/^search (.+)/i))) return { open: "https://www.google.com/search?q=" + encodeURIComponent(m[1]) };
+  if ((m = s.match(/^(?:open|go to) (.+)/i))) return { open: /^(https?:\/\/|[\w-]+\.[a-z]{2,})/i.test(m[1]) ? m[1] : "https://www.google.com/search?q=" + encodeURIComponent(m[1]) };
+  if (/^(https?:\/\/|[\w-]+\.[a-z]{2,}(\/|$))/i.test(s)) return { open: s };
+  return null;
 }
-function renderCue() { const c = cmds[cue]; $("#cueNext").textContent = c ? (c.label || c.cmd) : "End of the list"; }
-function renderDls() {
-  const box = $("#dlCards"); box.replaceChildren();
-  dls.filter(d => d.name && d.date).sort((a, b) => a.date.localeCompare(b.date)).forEach(d => {
-    const days = Math.ceil((new Date(d.date + "T23:59:59") - Date.now()) / 864e5);
-    const c = el("div", "dl");
-    c.append(el("b", "", days < 0 ? "Past" : String(days)), el("span", "", (days === 1 ? "day left: " : "days left: ") + d.name));
-    box.append(c);
-  });
+function doBar() {
+  const t = $("#cmdIn").value.trim(); if (!t) return;
+  const p = parseCommand(t); if (!p) return toast("Didn't get that. See Help for commands.", true);
+  $("#cmdIn").value = ""; if (p.open) openOnPc(p.open); else if (p.timer) focus(p.timer, 0); else run(p.cmd);
 }
-function renderTiles() {
-  const box = $("#tiles"); box.replaceChildren();
-  if (!(S.statsAge < 20000)) { box.append(el("p", "empty", "No data. Run pc_remote.py (needs psutil).")); return; }
-  [["cpu", "CPU", "%"], ["ram", "RAM", "%"], ["disk", "Disk", "%"], ["gpu", "GPU", "\u00b0"]].forEach(([k, l, u]) => {
-    const v = S.stats[k]; if (v === undefined) return;
-    const t = el("div", "tile" + (Number(v) >= (k === "gpu" ? 85 : 90) ? " hot" : ""));
-    t.append(el("b", "", v + u), el("span", "", l)); box.append(t);
-  });
-}
-function renderLinks() {
-  const lg = $("#linkGrid"), mg = $("#modeGrid"), rc = $("#recent");
-  lg.replaceChildren(); mg.replaceChildren(); rc.replaceChildren();
-  const ls = links.filter(l => l.url), ms = modes.filter(m => m.urls);
-  $("#noLinks").hidden = ls.length > 0; $("#noModes").hidden = ms.length > 0;
-  ls.forEach(l => { const b = el("button", "", l.label || l.url); b.onclick = () => openOnPc(l.url); lg.append(b); });
-  ms.forEach(m => { const b = el("button", "", m.name || "Mode"); b.onclick = () => openOnPc(m.urls); mg.append(b); });
-  (S.linkhist || []).forEach(u => { const li = el("li", "info", ""); li.append(el("p", "", u)); li.onclick = () => openOnPc(u); rc.append(li); });
-}
-function renderShots() {
-  const sh = S.shots || [], key = sh.join();
-  if (!sel || !sh.includes(sel)) sel = sh[0] || null;
-  $("#shotBox").hidden = !sel;
-  if (sel) { const u = imgUrl(sel); if ($("#shotImg").getAttribute("src") !== u) $("#shotImg").src = u; }
-  if (key === shotKey) return;
-  shotKey = key;
-  const g = $("#gal"); g.replaceChildren();
-  sh.forEach(n => { const i = el("img"); i.src = imgUrl(n); i.onclick = () => { sel = n; shotKey = ""; renderShots(); }; if (n === sel) i.className = "on"; g.append(i); });
-}
+$("#cmdGo").onclick = doBar; $("#cmdIn").onkeydown = e => { if (e.key === "Enter") doBar(); };
 
-async function load(first) {
-  try { S = await api("/api/state"); $("#live").classList.add("on"); }
-  catch (e) { $("#live").classList.remove("on"); return; }
-  $("#ip").textContent = "http://" + S.ip + ":5000";
-  $("#pcLive").classList.toggle("on", !!S.pcOnline);
-  renderInbox(); renderAsks(); renderTiles(); renderShots();
-  say("#pcState", S.statsAge < 20000 ? "The PC script is running." : "No report from the PC. It may be off, or the script isn't running.", S.statsAge >= 20000);
-  if (first) {
-    rems = S.reminders; dls = S.deadlines; cmds = S.commands; links = S.links; modes = S.modes; $("#pc").value = S.pc;
-    editor($("#rows"), cmds, CF); editor($("#remRows"), rems, RF, true); editor($("#dlRows"), dls, DF, false, renderDls);
-    editor($("#lkRows"), links, LF, false, renderLinks); editor($("#mdRows"), modes, MF, false, renderLinks);
-    pads = S.pads; snds = S.sounds; voice = S.voice;
-    editor($("#vRows"), voice, VF); $("#voiceOn").checked = S.voiceOn; $("#voiceLang").value = S.voiceLang;
-    editor($("#padRows"), pads, PF, true, renderPads); editor($("#sndRows"), snds, SF, false, renderSounds);
-    renderPads(); renderSounds();
-    renderRemote(); renderDls();
-    const P = S.prefs;
-    $("#qOn").checked = P.q_on; $("#qFrom").value = P.q_from; $("#qTo").value = P.q_to;
-    $("#vLang").value = P.tts_lang; $("#vRate").value = P.tts_rate; $("#pinOff").hidden = !P.pin;
-    // F3c + F4c: new setup fields, with fallbacks if the state predates them
-    $("#wolMac").value = P.wol_mac || "90:48:9A:E3:64:6E";
-    $("#wolDelay").value = P.wol_delay_min || 5;
-    $("#battThresh").value = P.batt_threshold || 15;
-  }
-  renderLinks();
-}
-
-document.querySelectorAll("#types button").forEach(b => b.onclick = () => {
-  type = b.dataset.t;
-  document.querySelectorAll("#types button").forEach(x => x.setAttribute("aria-pressed", x === b));
-});
-$("#sendBtn").onclick = async () => {
-  const text = $("#text").value.trim();
-  if (!text) return say("#sendMsg", "Type a message first.", 1);
-  await api("/notify", { title: $("#title").value.trim() || "Alert", text, type, speak: $("#speak").checked ? "1" : "0" });
-  say("#sendMsg", "Sent."); $("#text").value = ""; load();
-};
-$("#clear").onclick = async () => { await api("/api/clear", {}); load(); };
-
-$("#go").onclick = async () => {
-  const c = cmds[cue]; if (!c) return;
-  const r = await api("/api/command", { cmd: c.cmd });
-  say("#cMsg", r.msg, r.msg !== "Sent.");
-  if (r.msg === "Sent.") { cue++; renderCue(); }
-};
-$("#cueBack").onclick = () => { cue = Math.max(0, cue - 1); renderCue(); };
-$("#cueReset").onclick = () => { cue = 0; renderCue(); };
-
-// F3c: Wake PC button
-$("#wolBtn").onclick = async () => {
-  const r = await api("/api/command", { cmd: "wol" });
-  say("#wolMsg", r.msg === "Sent." ? "Magic packet sent. The PC should wake in a few seconds." : r.msg, r.msg !== "Sent.");
-};
-
-const last = {};
-function sendVal(name, v, force) {
-  const now = Date.now();
-  if (!force && now - (last[name] || 0) < 80) return;
-  last[name] = now; api("/api/value", { name, value: String(v) });
-}
-document.querySelectorAll(".sl").forEach(s => {
-  s.oninput = () => sendVal(s.dataset.n, s.value);
-  s.onchange = () => sendVal(s.dataset.n, s.value, true);
-});
-const pad = $("#pad");
-function xy(e, force) {
-  const r = pad.getBoundingClientRect();
-  const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
-  const y = Math.min(1, Math.max(0, 1 - (e.clientY - r.top) / r.height));
-  $("#dot").style.left = x * 100 + "%"; $("#dot").style.top = (1 - y) * 100 + "%";
-  sendVal("xy", x.toFixed(3) + "," + y.toFixed(3), force);
-}
-pad.onpointerdown = e => { pad.setPointerCapture(e.pointerId); xy(e); pad.onpointermove = xy; };
-pad.onpointerup = e => { pad.onpointermove = null; xy(e, true); };
-
-let sens = false, lastShake = 0;
-function onTilt(e) {
-  const x = Math.max(-1, Math.min(1, (e.gamma || 0) / 90)), y = Math.max(-1, Math.min(1, (e.beta || 0) / 90));
-  $("#tiltOut").textContent = "Tilt " + x.toFixed(2) + ", " + y.toFixed(2);
-  sendVal("tilt", x.toFixed(3) + "," + y.toFixed(3));
-}
-function onShake(e) {
-  const a = e.accelerationIncludingGravity; if (!a) return;
-  if (Math.hypot(a.x || 0, a.y || 0, a.z || 0) > 25 && Date.now() - lastShake > 600) {
-    lastShake = Date.now(); $("#tiltOut").textContent = "Shake!"; sendVal("shake", "1", true);
-  }
-}
-$("#sensBtn").onclick = () => {
-  sens = !sens;
-  $("#sensBtn").textContent = sens ? "Stop sending" : "Start sending";
-  if (!sens) $("#tiltOut").textContent = "Off";
-  const f = sens ? addEventListener : removeEventListener;
-  f("deviceorientation", onTilt); f("devicemotion", onShake);
-};
-
-async function openOnPc(text) {
-  const r = await api("/api/open", { url: text });
-  say("#lkMsg", r.msg === "Sent." ? "Opening on your PC." : r.msg, r.msg !== "Sent.");
-  load();
-}
-$("#lkGo").onclick = () => { const t = $("#lkIn").value.trim(); if (t) { openOnPc(t); $("#lkIn").value = ""; } };
-[["YouTube", "https://www.youtube.com/results?search_query="], ["Google", "https://www.google.com/search?q="], ["Maps", "https://www.google.com/maps/search/"]]
-  .forEach(([l, base]) => {
-    const b = el("button", "chip", "Search " + l);
-    b.onclick = () => { const q = $("#lkIn").value.trim(); if (q) { openOnPc(base + encodeURIComponent(q)); $("#lkIn").value = ""; } };
-    $("#lkSearch").append(b);
-  });
-$("#addLk").onclick = () => { links.push({ label: "", url: "" }); editor($("#lkRows"), links, LF, false, renderLinks); };
-$("#addMd").onclick = () => { modes.push({ name: "", urls: "" }); editor($("#mdRows"), modes, MF, false, renderLinks); };
-$("#lkSave").onclick = async () => {
-  await api("/api/links", { links: JSON.stringify(links.filter(l => l.url)), modes: JSON.stringify(modes.filter(m => m.urls)) });
-  renderLinks(); say("#lkSaveMsg", "Saved.");
-};
-
-$("#shotGo").onclick = async () => {
-  const r = await api("/api/shot", { monitor: $("#mon").value, delay: $("#dly").value, live: "0" });
-  say("#shMsg", r.msg === "Sent." ? "Taking the screenshot..." : r.msg, r.msg !== "Sent.");
-  setTimeout(load, 2500 + Number($("#dly").value) * 1000);
-};
-$("#shotSave").onclick = async () => {
-  if (!sel) return say("#shMsg", "Take a screenshot first.", 1);
-  const r = await api("/api/saveshot", { name: sel }); say("#shMsg", r.msg, !r.msg.startsWith("Saved"));
-};
-const tick = () => api("/api/shot", { monitor: $("#mon").value, delay: "0", live: "1" }).then(() => setTimeout(load, 1500));
-$("#liveBtn").onclick = () => {
-  if (liveT) { clearInterval(liveT); liveT = null; $("#liveBtn").textContent = "Live view"; }
-  else { tick(); liveT = setInterval(tick, 4000); $("#liveBtn").textContent = "Stop live"; }
-};
-
-$("#photo").onchange = async () => {
-  const f = $("#photo").files[0]; if (!f) return;
-  say("#sdMsg", "Sending...");
-  try {
-    const bmp = await createImageBitmap(f);
-    const k = Math.min(1, 2048 / Math.max(bmp.width, bmp.height));
-    const c = document.createElement("canvas");
-    c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
-    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
-    const b64 = c.toDataURL("image/jpeg", 0.9).split(",")[1];
-    const name = (f.name || "photo").replace(/\.[^.]+$/, "") + ".jpg";
-    const r = await fetch("/api/photo?pin=" + encodeURIComponent(pinv()) + "&name=" + encodeURIComponent(name),
-      { method: "POST", headers: { "Content-Type": "text/plain" }, body: b64 }).then(x => x.json()).then(chk);
-    say("#sdMsg", r.msg, r.msg !== "Sent.");
-  } catch (e) { say("#sdMsg", "Couldn't send that photo.", 1); }
-  $("#photo").value = "";
-};
-$("#clipSend").onclick = async () => {
-  const text = $("#clipText").value; if (!text) return say("#sdMsg", "Type or paste something first.", 1);
-  const r = await api("/api/clip", { text }); say("#sdMsg", r.msg, r.msg !== "Sent.");
-};
-
-const at = m => new Date(Date.now() + m * 6e4).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-[[25, 5], [50, 10], [90, 15]].forEach(([m, br]) => {
-  const b = el("button", "", m + " min focus, " + br + " break");
-  b.onclick = async () => {
-    await api("/api/timer", { minutes: m, text: "Focus block done. Take a break." });
-    await api("/api/timer", { minutes: m + br, text: "Break over. Back to it." });
-    say("#fMsg", "Started. I will tell you at " + at(m) + ".");
-  };
-  $("#fpre").append(b);
-});
-$("#fGo").onclick = async () => {
-  const m = Number($("#fMin").value); if (!(m > 0)) return;
-  const what = $("#fText").value.trim();
-  await api("/api/timer", { minutes: m, text: what ? what + ": time is up." : "Time is up." });
-  say("#fMsg", "Started. I will tell you at " + at(m) + ".");
-};
-
-[["Portfolio hour", { text: "Portfolio hour. Write one paragraph in English.", every: 0, at: "20:00" }],
- ["Series writing", { text: "Time to work on the series.", every: 0, at: "18:00" }],
- ["Stretch and water", { text: "Stretch and drink some water.", every: 60, at: "" }],
- ["Rest your eyes", { text: "Look away from the screen for a minute.", every: 20, at: "" }]]
-.forEach(([l, o]) => {
-  const b = el("button", "chip", l);
-  b.onclick = () => { rems.push({ ...o }); editor($("#remRows"), rems, RF, true); };
-  $("#rpre").append(b);
-});
-$("#addRem").onclick = () => { rems.push({ text: "", every: 0, at: "" }); editor($("#remRows"), rems, RF, true); };
-$("#addDl").onclick = () => { dls.push({ name: "", date: "" }); editor($("#dlRows"), dls, DF, false, renderDls); };
-$("#planSave").onclick = async () => {
-  const list = rems.filter(r => r.text && (r.every > 0 || r.at))
-    .map(r => ({ text: r.text, every: r.every > 0 ? r.every : 0, at: r.every > 0 ? "" : r.at, speak: true }));
-  await api("/api/reminder", { list: JSON.stringify(list) });
-  await api("/api/deadlines", { list: JSON.stringify(dls.filter(d => d.name && d.date)) });
-  renderDls(); say("#planMsg", "Saved.");
-};
-
-const prefsPayload = () => ({
-  q_on: $("#qOn").checked ? "1" : "0", q_from: $("#qFrom").value || "23:00", q_to: $("#qTo").value || "07:00",
-  tts_lang: $("#vLang").value, tts_rate: $("#vRate").value || "1",
-  wol_mac: ($("#wolMac").value || "").trim(),
-  wol_delay_min: $("#wolDelay").value || "5",
-  batt_threshold: $("#battThresh").value || "15" });
-$("#addRow").onclick = () => { cmds.push({ label: "", cmd: "" }); editor($("#rows"), cmds, CF); };
-$("#setSave").onclick = async () => {
-  cmds = cmds.filter(c => c.cmd.trim());
-  await api("/api/settings", { pc: $("#pc").value, commands: JSON.stringify(cmds) });
-  const np = $("#pinNew").value.trim();
-  await api("/api/prefs", np ? { ...prefsPayload(), newpin: np } : prefsPayload());
-  if (np) { sessionStorage.setItem("pin", np); $("#pinNew").value = ""; $("#pinOff").hidden = false; }
-  editor($("#rows"), cmds, CF); renderRemote(); say("#setMsg", "Saved.");
-};
-$("#pinOff").onclick = async () => {
-  await api("/api/prefs", { ...prefsPayload(), newpin: "" });
-  sessionStorage.removeItem("pin"); $("#pinOff").hidden = true; say("#setMsg", "PIN removed.");
-};
-
-async function pullLog() {
-  const r = await api("/api/pclog");
-  const box = $("#con"), end = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
-  box.textContent = r.text || "(nothing yet)"; if (end) box.scrollTop = box.scrollHeight;
-}
-$("#conBtn").onclick = () => {
-  if (conT) { clearInterval(conT); conT = null; $("#con").hidden = true; $("#conBtn").textContent = "Show console"; }
-  else { $("#con").hidden = false; $("#conBtn").textContent = "Hide console"; pullLog(); conT = setInterval(pullLog, 2000); }
-};
-$("#restartBtn").onclick = async () => {
-  const r = await api("/api/pcrestart", {});
-  say("#conMsg", r.msg === "Sent." ? "Restarting. Give it 5 seconds." : r.msg, r.msg !== "Sent.");
-};
-
-let pads = [], snds = [], msgs = [], tp = null, moved = 0, tdown = 0, sendT = 0;
-const acc = { x: 0, y: 0 };
-const PF = [["label", "Name"], ["osc", "/pad/1"], ["note", "MIDI note", "number"]];
-const SF = [["label", "Name"], ["path", "C:\\sounds\\hit.wav"]];
-const inp = m => fetch("/api/input", { method: "POST", body: new URLSearchParams({ msg: m, pin: pinv() }) }).catch(() => {});
-
-const touch = $("#touch");
+/* ============ 6. CONTROL ============ */
+const touch = $("#touch"), acc = { x: 0, y: 0 }; let tp = null, moved = 0, tdown = 0, sendT = 0;
 touch.onpointerdown = e => { touch.setPointerCapture(e.pointerId); tp = { x: e.clientX, y: e.clientY }; moved = 0; tdown = Date.now(); };
 touch.onpointermove = e => {
-  if (!tp) return;
-  const dx = e.clientX - tp.x, dy = e.clientY - tp.y;
+  if (!tp) return; const dx = e.clientX - tp.x, dy = e.clientY - tp.y;
   tp = { x: e.clientX, y: e.clientY }; acc.x += dx * 1.8; acc.y += dy * 1.8; moved += Math.abs(dx) + Math.abs(dy);
   const now = Date.now();
-  if (now - sendT > 25 && (Math.abs(acc.x) >= 1 || Math.abs(acc.y) >= 1)) {
-    const ix = Math.trunc(acc.x), iy = Math.trunc(acc.y);
-    acc.x -= ix; acc.y -= iy; sendT = now; inp("move " + ix + " " + iy);
-  }
+  if (now - sendT > 25 && (Math.abs(acc.x) >= 1 || Math.abs(acc.y) >= 1)) { const ix = Math.trunc(acc.x), iy = Math.trunc(acc.y); acc.x -= ix; acc.y -= iy; sendT = now; inp("move " + ix + " " + iy); }
 };
 touch.onpointerup = () => { if (tp && moved < 6 && Date.now() - tdown < 300) inp("click left"); tp = null; };
-document.querySelectorAll("[data-click]").forEach(b => b.onclick = () => inp("click " + b.dataset.click));
-document.querySelectorAll("[data-scroll]").forEach(b => b.onclick = () => inp("scroll " + b.dataset.scroll));
-document.querySelectorAll("[data-key]").forEach(b => b.onclick = () => inp("key " + b.dataset.key));
-[["Enter", "enter"], ["Esc", "esc"], ["Tab", "tab"], ["Backspace", "backspace"], ["Space", "space"],
- ["Up", "up"], ["Down", "down"], ["Left", "left"], ["Right", "right"]].forEach(([l, k]) => {
-  const b = el("button", "chip", l); b.onclick = () => inp("key " + k); $("#keys").append(b);
-});
+$$("[data-click]").forEach(b => b.onclick = () => inp("click " + b.dataset.click));
+$$("[data-scroll]").forEach(b => b.onclick = () => inp("scroll " + b.dataset.scroll));
+$$("[data-key]").forEach(b => b.onclick = () => inp("key " + b.dataset.key));
+[["Enter", "enter"], ["Esc", "esc"], ["Tab", "tab"], ["Backspace", "backspace"], ["Space", "space"], ["Up", "up"], ["Down", "down"], ["Left", "left"], ["Right", "right"]]
+  .forEach(([l, k]) => { const b = el("button", "chip", l); b.onclick = () => inp("key " + k); $("#keys").append(b); });
+[["Alt+Tab", "alt+tab"], ["Show desktop", "win+d"], ["Task view", "win+tab"], ["Copy", "ctrl+c"], ["Paste", "ctrl+v"], ["Undo", "ctrl+z"], ["Fullscreen", "f11"], ["Task manager", "ctrl+shift+esc"]]
+  .forEach(([l, c]) => { const b = el("button", "chip", l); b.onclick = () => inp("combo " + c); $("#combos").append(b); });
 $("#typeGo").onclick = () => { const t = $("#typeIn").value; if (t) { inp("type " + t); $("#typeIn").value = ""; } };
-
-function renderPads() {
-  const box = $("#pads"); box.replaceChildren();
-  (pads.length ? pads : Array.from({ length: 8 }, (_, i) => ({ label: String(i + 1), osc: "/pad/" + (i + 1), note: 36 + i }))).forEach(p => {
-    const b = el("button", "pad1", p.label || p.osc), note = Number(p.note) || 0, osc = p.osc || "/pad";
-    let on = false;
-    const down = () => { if (on) return; on = true; b.classList.add("on"); inp("pad " + osc + " 1 " + note); if (navigator.vibrate) navigator.vibrate(10); };
-    const up = () => { if (!on) return; on = false; b.classList.remove("on"); inp("pad " + osc + " 0 " + note); };
-    b.onpointerdown = e => { e.preventDefault(); down(); };
-    b.onpointerup = up; b.onpointerleave = up; b.onpointercancel = up;
-    box.append(b);
-  });
-}
-$("#addPad").onclick = () => { pads.push({ label: "", osc: "/pad/" + (pads.length + 1), note: 36 + pads.length }); editor($("#padRows"), pads, PF, true, renderPads); renderPads(); };
-$("#padSave").onclick = async () => { await api("/api/kv", { key: "pads", value: JSON.stringify(pads.filter(p => p.osc)) }); renderPads(); say("#padMsg", "Saved."); };
-
-function renderSounds() {
-  const g = $("#sndGrid"); g.replaceChildren();
-  const ss = snds.filter(s => s.path); $("#noSnd").hidden = ss.length > 0; $("#stopSnd").hidden = ss.length === 0;
-  ss.forEach(s => { const b = el("button", "", s.label || s.path); b.onclick = () => api("/api/command", { cmd: "play:" + s.path }); g.append(b); });
-}
-$("#addSnd").onclick = () => { snds.push({ label: "", path: "" }); editor($("#sndRows"), snds, SF, false, renderSounds); };
-$("#sndSave").onclick = async () => { await api("/api/kv", { key: "sounds", value: JSON.stringify(snds.filter(s => s.path)) }); renderSounds(); say("#sndMsg", "Saved."); };
-$("#stopSnd").onclick = () => api("/api/command", { cmd: "stopsound" });
-
+$$("[data-power]").forEach(b => { const a = b.dataset.power, label = b.textContent, fn = () => run("power:" + a); if (a === "restart") armed(b, label, fn); else b.onclick = fn; });
+$("#shutGo").onclick = () => { const m = Number($("#shutMin").value); if (m > 0) run("power:shutdown:" + m).then(() => toast("Shutting down in " + m + " minutes")); };
+$("#shutCancel").onclick = () => run("power:cancel");
+$("#awakeOn").onchange = () => pcSet("keep_awake", $("#awakeOn").checked ? "1" : "0");
+$$("#procMode button").forEach(b => b.onclick = () => { procMode = b.dataset.m; $$("#procMode button").forEach(x => x.setAttribute("aria-pressed", x === b)); });
 async function loadProcs() {
   const r = await api("/api/procs"), box = $("#procs"); box.replaceChildren();
-  if (!r.list || !r.list.length) return say("#procMsg", r.err || "Couldn't read the PC's programs. Is the script running?", 1);
-  $("#procMsg").textContent = "";
+  if (!r.list || !r.list.length) return toast(r.err || "Couldn't read the PC's programs", true);
   r.list.forEach(n => {
     const b = el("button", "chip", n);
-    let armed = false;
+    if (procMode === "close") { /* handled below */ }
+    let a = false;
     b.onclick = async () => {
       if (procMode === "close") {
-        if (!armed) { armed = true; b.textContent = "Tap again to close " + n; setTimeout(() => { armed = false; b.textContent = n; }, 3000); return; }
-        armed = false; b.textContent = n;
-        const m = await api("/api/command", { cmd: "kill:" + n });
-        return say("#procMsg", m.msg === "Sent." ? "Closing " + n + "." : m.msg, m.msg !== "Sent.");
+        if (!a) { a = true; b.textContent = "Tap again to close " + n; setTimeout(() => { a = false; b.textContent = n; }, 3000); return; }
+        a = false; b.textContent = n; return run("kill:" + n);
       }
-      const m = await api("/api/watchproc", { name: n });
-      say("#procMsg", m.msg === "Sent." ? "Watching " + n + "." : m.msg, m.msg !== "Sent.");
+      const m = await api("/api/watchproc", { name: n }); toast(m.msg === "Sent." ? "Watching " + n : m.msg, m.msg !== "Sent.");
     };
     box.append(b);
   });
 }
 $("#procRefresh").onclick = () => loadProcs().catch(() => {});
-async function loadAway() {
-  const r = await api("/api/pcget");
-  $("#awakeOn").checked = !!r.keep_awake; $("#awayOn").checked = !!r.lock_away; $("#awayMin").value = r.away_min || 3;
-}
-$("#awaySave").onclick = async () => {
-  await api("/api/pcset", { name: "away_min", value: $("#awayMin").value || "3" });
-  const r = await api("/api/pcset", { name: "lock_away", value: $("#awayOn").checked ? "1" : "0" });
-  say("#awayMsg", r.msg === "Sent." ? "Saved." : r.msg, r.msg !== "Sent.");
-};
 
-try { msgs = JSON.parse(sessionStorage.getItem("chat") || "[]"); } catch (e) {}
-function renderChat() {
-  const box = $("#chat"); box.replaceChildren();
-  msgs.forEach(m => box.append(el("div", "bub " + (m.role === "user" ? "me" : "ai"), m.content)));
-  sessionStorage.setItem("chat", JSON.stringify(msgs.slice(-40)));
-  window.scrollTo(0, document.body.scrollHeight);
+/* ============ 7. STAGE ============ */
+function renderRemote() {
+  const g = $("#cmds"); g.replaceChildren(); $("#noCmds").hidden = cmds.length > 0; renderCue();
+  cmds.forEach(c => { const b = el("button", "", c.label || c.cmd); b.onclick = () => run(c.cmd); g.append(b); });
 }
-async function sendChat() {
-  const t = $("#chatIn").value.trim(); if (!t) return;
-  $("#chatIn").value = ""; msgs.push({ role: "user", content: t }); renderChat();
-  $("#chat").append(el("div", "bub ai", "..."));
+function renderCue() { const c = cmds[cue]; $("#cueNext").textContent = c ? (c.label || c.cmd) : "End of the list"; }
+$("#go").onclick = async () => { const c = cmds[cue]; if (!c) return; if (await run(c.cmd, true)) { cue++; renderCue(); } else toast("Couldn't reach the PC", true); };
+$("#cueBack").onclick = () => { cue = Math.max(0, cue - 1); renderCue(); }; $("#cueReset").onclick = () => { cue = 0; renderCue(); };
+
+function renderScenes() {
+  const g = $("#sceneGrid"); g.replaceChildren(); const ss = scenes.filter(s => s.name && s.steps); $("#noScenes").hidden = ss.length > 0;
+  ss.forEach(s => { const b = el("button", "", s.name); b.onclick = () => run("scene:" + s.name); g.append(b); });
+}
+function sceneEditor() {
+  const box = $("#sceneRows"); box.replaceChildren();
+  scenes.forEach((s, i) => {
+    const row = el("div", "f"), n = el("input"), t = el("textarea"), x = el("button", "chip", "Remove scene");
+    n.type = "text"; n.placeholder = "Scene name"; n.value = s.name || ""; n.oninput = () => s.name = n.value; n.style.marginBottom = "8px";
+    t.placeholder = "One step per line, like:\nurl:https://youtube.com\ninput:vol 30\nwait:2\nplay:C:\\sounds\\hit.wav"; t.value = s.steps || ""; t.oninput = () => s.steps = t.value;
+    x.style.marginTop = "8px"; x.onclick = () => { scenes.splice(i, 1); sceneEditor(); renderScenes(); }; row.append(n, t, x); box.append(row);
+  });
+}
+$("#addScene").onclick = () => { scenes.push({ name: "", steps: "" }); sceneEditor(); };
+$("#sceneSave").onclick = async () => { const r = await pcSet("scenes", JSON.stringify(scenes.filter(s => s.name && s.steps))); toast(r.msg === "Sent." ? "Scenes saved" : "Open the PC first: " + r.msg, r.msg !== "Sent."); renderScenes(); };
+
+const PF = [["label", "Name"], ["osc", "/pad/1"], ["note", "MIDI note", "number"]], SF = [["label", "Name"], ["path", "C:\\sounds\\hit.wav"]];
+function renderPads() {
+  const box = $("#pads"); box.replaceChildren();
+  (pads.length ? pads : Array.from({ length: 8 }, (_, i) => ({ label: String(i + 1), osc: "/pad/" + (i + 1), note: 36 + i }))).forEach(p => {
+    const b = el("button", "pad1", p.label || p.osc), note = Number(p.note) || 0, osc = p.osc || "/pad"; let on = false;
+    const down = () => { if (on) return; on = true; b.classList.add("on"); inp("pad " + osc + " 1 " + note); if (navigator.vibrate) navigator.vibrate(10); };
+    const up = () => { if (!on) return; on = false; b.classList.remove("on"); inp("pad " + osc + " 0 " + note); };
+    b.onpointerdown = e => { e.preventDefault(); down(); }; b.onpointerup = up; b.onpointerleave = up; b.onpointercancel = up; box.append(b);
+  });
+}
+$("#addPad").onclick = () => { pads.push({ label: "", osc: "/pad/" + (pads.length + 1), note: 36 + pads.length }); editor($("#padRows"), pads, PF, true, renderPads); renderPads(); };
+$("#padSave").onclick = async () => { await api("/api/kv", { key: "pads", value: JSON.stringify(pads.filter(p => p.osc)) }); renderPads(); toast("Pads saved"); };
+function renderSounds() {
+  const g = $("#sndGrid"); g.replaceChildren(); const ss = snds.filter(s => s.path); $("#noSnd").hidden = ss.length > 0; $("#stopSnd").hidden = ss.length === 0;
+  ss.forEach(s => { const b = el("button", "", s.label || s.path); b.onclick = () => run("play:" + s.path, true); g.append(b); });
+}
+$("#addSnd").onclick = () => { snds.push({ label: "", path: "" }); editor($("#sndRows"), snds, SF, false, renderSounds); };
+$("#sndSave").onclick = async () => { await api("/api/kv", { key: "sounds", value: JSON.stringify(snds.filter(s => s.path)) }); renderSounds(); toast("Sounds saved"); };
+$("#stopSnd").onclick = () => run("stopsound", true);
+
+const last = {};
+function sendVal(name, v, force) { const now = Date.now(); if (!force && now - (last[name] || 0) < 80) return; last[name] = now; api("/api/value", { name, value: String(v) }); }
+$$(".sl[data-n]").forEach(s => { s.oninput = () => sendVal(s.dataset.n, s.value); s.onchange = () => sendVal(s.dataset.n, s.value, true); });
+const pad = $("#pad");
+function xy(e, force) {
+  const r = pad.getBoundingClientRect(), x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y = Math.min(1, Math.max(0, 1 - (e.clientY - r.top) / r.height));
+  $("#dot").style.left = x * 100 + "%"; $("#dot").style.top = (1 - y) * 100 + "%"; sendVal("xy", x.toFixed(3) + "," + y.toFixed(3), force);
+}
+pad.onpointerdown = e => { pad.setPointerCapture(e.pointerId); xy(e); pad.onpointermove = xy; }; pad.onpointerup = e => { pad.onpointermove = null; xy(e, true); };
+let sens = false, lastShake = 0;
+function onTilt(e) { const x = Math.max(-1, Math.min(1, (e.gamma || 0) / 90)), y = Math.max(-1, Math.min(1, (e.beta || 0) / 90)); $("#tiltOut").textContent = "Tilt " + x.toFixed(2) + ", " + y.toFixed(2); sendVal("tilt", x.toFixed(3) + "," + y.toFixed(3)); }
+function onShake(e) { const a = e.accelerationIncludingGravity; if (!a) return; if (Math.hypot(a.x || 0, a.y || 0, a.z || 0) > 25 && Date.now() - lastShake > 600) { lastShake = Date.now(); $("#tiltOut").textContent = "Shake!"; sendVal("shake", "1", true); } }
+$("#sensBtn").onclick = () => { sens = !sens; $("#sensBtn").textContent = sens ? "Stop sending tilt" : "Start sending tilt"; if (!sens) $("#tiltOut").textContent = "Off"; const f = sens ? addEventListener : removeEventListener; f("deviceorientation", onTilt); f("devicemotion", onShake); };
+
+/* ============ 8. SHARE ============ */
+const imgUrl = n => "/shots/" + n + "?pin=" + encodeURIComponent(pinv());
+function renderShots() {
+  const sh = S.shots || [], key = sh.join(); if (!sel || !sh.includes(sel)) sel = sh[0] || null; $("#shotBox").hidden = !sel;
+  if (sel) { const u = imgUrl(sel); if ($("#shotImg").getAttribute("src") !== u) $("#shotImg").src = u; }
+  if (key === shotKey) return; shotKey = key; const g = $("#gal"); g.replaceChildren();
+  sh.forEach(n => { const i = el("img"); i.src = imgUrl(n); i.onclick = () => { sel = n; shotKey = ""; renderShots(); }; if (n === sel) i.className = "on"; g.append(i); });
+}
+$("#shotGo").onclick = async () => { const r = await api("/api/shot", { monitor: $("#mon").value, delay: $("#dly").value, live: "0" }); toast(r.msg === "Sent." ? "Taking the screenshot..." : r.msg, r.msg !== "Sent."); setTimeout(load, 2500 + Number($("#dly").value) * 1000); };
+$("#shotSave").onclick = async () => { if (!sel) return toast("Take a screenshot first", true); const r = await api("/api/saveshot", { name: sel }); toast(r.msg, !r.msg.startsWith("Saved")); };
+const tick = () => api("/api/shot", { monitor: $("#mon").value, delay: "0", live: "1" }).then(() => setTimeout(load, 1500));
+$("#liveBtn").onclick = () => { if (liveT) { clearInterval(liveT); liveT = null; $("#liveBtn").textContent = "Live view"; } else { tick(); liveT = setInterval(tick, 4000); $("#liveBtn").textContent = "Stop live"; } };
+const LF = [["label", "Name"], ["url", "https://..."]], MF = [["name", "Mode name"], ["urls", "Links, separated by spaces"]];
+function renderLinks() {
+  const lg = $("#linkGrid"), mg = $("#modeGrid"), rc = $("#recent"); lg.replaceChildren(); mg.replaceChildren(); rc.replaceChildren();
+  const ls = links.filter(l => l.url), ms = modes.filter(m => m.urls); $("#noLinks").hidden = ls.length > 0; $("#noModes").hidden = ms.length > 0;
+  ls.forEach(l => { const b = el("button", "", l.label || l.url); b.onclick = () => openOnPc(l.url); lg.append(b); });
+  ms.forEach(m => { const b = el("button", "", m.name || "Mode"); b.onclick = () => openOnPc(m.urls); mg.append(b); });
+  ((S && S.linkhist) || []).forEach(u => { const li = el("li", "info"); li.append(el("p", "", u)); li.onclick = () => openOnPc(u); rc.append(li); });
+}
+$("#lkGo").onclick = () => { const t = $("#lkIn").value.trim(); if (t) { openOnPc(t); $("#lkIn").value = ""; } };
+[["YouTube", "https://www.youtube.com/results?search_query="], ["Google", "https://www.google.com/search?q="], ["Maps", "https://www.google.com/maps/search/"]].forEach(([l, base]) => {
+  const b = el("button", "chip", "Search " + l); b.onclick = () => { const q = $("#lkIn").value.trim(); if (q) { openOnPc(base + encodeURIComponent(q)); $("#lkIn").value = ""; } }; $("#lkSearch").append(b);
+});
+$("#addLk").onclick = () => { links.push({ label: "", url: "" }); editor($("#lkRows"), links, LF, false, renderLinks); };
+$("#addMd").onclick = () => { modes.push({ name: "", urls: "" }); editor($("#mdRows"), modes, MF, false, renderLinks); };
+$("#lkSave").onclick = async () => { await api("/api/links", { links: JSON.stringify(links.filter(l => l.url)), modes: JSON.stringify(modes.filter(m => m.urls)) }); renderLinks(); toast("Links saved"); };
+$("#photo").onchange = async () => {
+  const f = $("#photo").files[0]; if (!f) return; toast("Sending...");
   try {
-    const r = await fetch("/api/chat?pin=" + encodeURIComponent(pinv()),
-      { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ messages: msgs.slice(-20) }) })
-      .then(x => x.json()).then(chk);
-    msgs.push({ role: "assistant", content: r.reply });
-    if ($("#chatSpeak").checked) api("/api/say", { text: r.reply });
+    const bmp = await createImageBitmap(f), k = Math.min(1, 2048 / Math.max(bmp.width, bmp.height)), c = document.createElement("canvas");
+    c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k); c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    const b64 = c.toDataURL("image/jpeg", 0.9).split(",")[1], name = (f.name || "photo").replace(/\.[^.]+$/, "") + ".jpg";
+    const r = await fetch("/api/photo?pin=" + encodeURIComponent(pinv()) + "&name=" + encodeURIComponent(name), { method: "POST", headers: { "Content-Type": "text/plain" }, body: b64 }).then(x => x.json()).then(chk);
+    toast(r.msg === "Sent." ? "Photo sent" : r.msg, r.msg !== "Sent.");
+  } catch (e) { toast("Couldn't send that photo", true); }
+  $("#photo").value = "";
+};
+$("#clipSend").onclick = async () => { const text = $("#clipText").value; if (!text) return toast("Type or paste something first", true); const r = await api("/api/clip", { text }); toast(r.msg === "Sent." ? "Sent to the PC clipboard" : r.msg, r.msg !== "Sent."); };
+
+/* ============ 9. MORE pages ============ */
+$("#clear").onclick = async () => { await api("/api/clear", {}); load(); };
+$$("#types button").forEach(b => b.onclick = () => { type = b.dataset.t; $$("#types button").forEach(x => x.setAttribute("aria-pressed", x === b)); });
+$("#sendBtn").onclick = async () => { const text = $("#text").value.trim(); if (!text) return toast("Type a message first", true); await api("/notify", { title: $("#title").value.trim() || "Alert", text, type, speak: $("#speak").checked ? "1" : "0" }); toast("Sent"); $("#text").value = ""; load(); };
+
+let msgs = []; try { msgs = JSON.parse(sessionStorage.getItem("chat") || "[]"); } catch (e) {}
+function renderChat() { const box = $("#chat"); box.replaceChildren(); msgs.forEach(m => box.append(el("div", "bub " + (m.role === "user" ? "me" : "ai"), m.content))); sessionStorage.setItem("chat", JSON.stringify(msgs.slice(-40))); window.scrollTo(0, document.body.scrollHeight); }
+async function sendChat() {
+  const t = $("#chatIn").value.trim(); if (!t) return; $("#chatIn").value = ""; msgs.push({ role: "user", content: t }); renderChat(); $("#chat").append(el("div", "bub ai", "..."));
+  try {
+    const r = await fetch("/api/chat?pin=" + encodeURIComponent(pinv()), { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ messages: msgs.slice(-20) }) }).then(x => x.json()).then(chk);
+    msgs.push({ role: "assistant", content: r.reply }); if ($("#chatSpeak").checked) api("/api/say", { text: r.reply });
   } catch (e) { msgs.push({ role: "assistant", content: "Couldn't reach Susie." }); }
   renderChat();
 }
-$("#chatGo").onclick = sendChat;
-$("#chatIn").onkeydown = e => { if (e.key === "Enter") sendChat(); };
-$("#chatClear").onclick = () => { msgs = []; renderChat(); };
-renderChat();
+$("#chatGo").onclick = sendChat; $("#chatIn").onkeydown = e => { if (e.key === "Enter") sendChat(); }; $("#chatClear").onclick = () => { msgs = []; renderChat(); }; renderChat();
 
-let procMode = "watch", volBusy = 0, lastVol = 0;
-document.querySelectorAll("#procMode button").forEach(b => b.onclick = () => {
-  procMode = b.dataset.m;
-  document.querySelectorAll("#procMode button").forEach(x => x.setAttribute("aria-pressed", x === b));
-});
-[["Alt+Tab", "alt+tab"], ["Show desktop", "win+d"], ["Task view", "win+tab"], ["Copy", "ctrl+c"], ["Paste", "ctrl+v"],
- ["Undo", "ctrl+z"], ["Fullscreen", "f11"], ["Task manager", "ctrl+shift+esc"]].forEach(([l, c]) => {
-  const b = el("button", "chip", l); b.onclick = () => inp("combo " + c); $("#combos").append(b);
-});
-
-async function loadMedia() {
-  const r = await api("/api/media");
-  $("#npTitle").textContent = r.title || "Nothing playing";
-  $("#npArtist").textContent = r.artist || "";
-  $("#npPlay").textContent = r.playing ? "Pause" : "Play";
-  $("#volMute").textContent = r.muted ? "Unmute" : "Mute";
-  if (r.volume !== undefined) {
-    $("#volOut").textContent = r.volume + "%";
-    if (Date.now() - volBusy > 3000) $("#vol").value = r.volume;
-  }
+const EVENTS = [["phone_found", "Phone and PC meet"], ["phone_lost", "Phone leaves the Wi-Fi"], ["face_down", "Phone placed face-down"], ["picked_up", "Phone picked up"], ["shake", "Phone shaken"],
+  ["battery_low", "Phone battery low"], ["new_file", "New file in a watched folder"], ["program_closed", "A watched program closes"], ["pc_start", "PC script starts"]];
+function ruleEditor() {
+  const box = $("#ruleRows"); box.replaceChildren();
+  rules.forEach((r, i) => {
+    const row = el("div", "row wrap f"), s = el("select"), d = el("input"), x = el("button", "chip x", "Remove");
+    EVENTS.forEach(([v, l]) => { const o = el("option", "", l); o.value = v; s.append(o); }); s.value = r.when; s.onchange = () => r.when = s.value;
+    d.type = "text"; d.placeholder = "then run (like power:lock or scene:Work)"; d.value = r.do || ""; d.oninput = () => r.do = d.value;
+    x.onclick = () => { rules.splice(i, 1); ruleEditor(); }; row.append(s, d, x); box.append(row);
+  });
 }
-const mediaKey = k => { inp("media " + k); setTimeout(() => loadMedia().catch(() => {}), 700); };
-document.querySelectorAll("[data-media]").forEach(b => b.onclick = () => mediaKey(b.dataset.media));
-$("#npPlay").onclick = () => mediaKey("playpause");
-$("#volUp").onclick = () => mediaKey("volup");
-$("#volDown").onclick = () => mediaKey("voldown");
-$("#volMute").onclick = () => { inp("mute"); setTimeout(() => loadMedia().catch(() => {}), 700); };
-$("#vol").oninput = () => {
-  volBusy = Date.now(); $("#volOut").textContent = $("#vol").value + "%";
-  if (Date.now() - lastVol > 120) { lastVol = Date.now(); inp("vol " + $("#vol").value); }
-};
-$("#vol").onchange = () => inp("vol " + $("#vol").value);
+[["Face-down pauses music", { when: "face_down", do: "input:media playpause" }], ["Picked up resumes", { when: "picked_up", do: "input:media playpause" }], ["Leaving locks the PC", { when: "phone_lost", do: "power:lock" }],
+ ["Shake takes a screenshot", { when: "shake", do: "screenshot" }], ["Meeting starts a scene", { when: "phone_found", do: "scene:Morning" }]]
+  .forEach(([l, o]) => { const b = el("button", "chip", l); b.onclick = () => { rules.push({ ...o }); ruleEditor(); }; $("#rpre2").append(b); });
+$("#addRule").onclick = () => { rules.push({ when: "phone_found", do: "" }); ruleEditor(); };
+$("#ruleSave").onclick = async () => { const r = await pcSet("rules", JSON.stringify(rules.filter(x => x.when && x.do))); toast(r.msg === "Sent." ? "Automations saved" : "Open the PC first: " + r.msg, r.msg !== "Sent."); };
+$("#motionOn").onchange = async () => { await api("/api/motion", { on: $("#motionOn").checked ? "1" : "0" }); toast($("#motionOn").checked ? "Watching phone motion" : "Motion watching off"); };
+$("#awaySave").onclick = async () => { await pcSet("away_min", $("#awayMin").value || "3"); const r = await pcSet("lock_away", $("#awayOn").checked ? "1" : "0"); toast(r.msg === "Sent." ? "Saved" : r.msg, r.msg !== "Sent."); };
 
-document.querySelectorAll("[data-power]").forEach(b => {
-  const label = b.textContent; let armed = false;
-  b.onclick = async () => {
-    const a = b.dataset.power;
-    if (a === "restart" && !armed) { armed = true; b.textContent = "Tap again to restart"; setTimeout(() => { armed = false; b.textContent = label; }, 3000); return; }
-    armed = false; b.textContent = label;
-    const r = await api("/api/command", { cmd: "power:" + a });
-    say("#pwMsg", r.msg === "Sent." ? label + " sent." : r.msg, r.msg !== "Sent.");
-  };
-});
-$("#shutGo").onclick = async () => {
-  const m = Number($("#shutMin").value); if (!(m > 0)) return;
-  const r = await api("/api/command", { cmd: "power:shutdown:" + m });
-  say("#pwMsg", r.msg === "Sent." ? "The PC will shut down in " + m + " minutes." : r.msg, r.msg !== "Sent.");
-};
-$("#shutCancel").onclick = async () => {
-  const r = await api("/api/command", { cmd: "power:cancel" });
-  say("#pwMsg", r.msg === "Sent." ? "Shutdown cancelled." : r.msg, r.msg !== "Sent.");
-};
-$("#awakeOn").onchange = () => api("/api/pcset", { name: "keep_awake", value: $("#awakeOn").checked ? "1" : "0" });
-
-let voice = [];
 const VF = [["phrase", "What you say"], ["cmd", "Action"]];
-[["Screenshot", "screenshot", "screenshot"], ["Play or pause", "pause", "input:media playpause"], ["Next song", "next song", "input:media next"],
- ["Volume up", "volume up", "input:media volup"], ["Volume down", "volume down", "input:media voldown"],
- ["Mute", "mute", "input:mute"], ["Lock PC", "lock computer", "power:lock"], ["Wake PC", "wake my pc", "wol"]].forEach(([l, ph, cmd]) => {
-  const b = el("button", "chip", l);
-  b.onclick = () => { voice.push({ phrase: ph, cmd }); editor($("#vRows"), voice, VF); };
-  $("#vpre").append(b);
-});
+[["Screenshot", "screenshot", "screenshot"], ["Play or pause", "pause", "input:media playpause"], ["Next song", "next song", "input:media next"], ["Volume up", "volume up", "input:media volup"],
+ ["Volume down", "volume down", "input:media voldown"], ["Mute", "mute", "input:mute"], ["Lock PC", "lock computer", "power:lock"]]
+  .forEach(([l, ph, cmd]) => { const b = el("button", "chip", l); b.onclick = () => { voice.push({ phrase: ph, cmd }); editor($("#vRows"), voice, VF); }; $("#vpre").append(b); });
 $("#addVoice").onclick = () => { voice.push({ phrase: "", cmd: "" }); editor($("#vRows"), voice, VF); };
-$("#voiceSave").onclick = async () => {
-  await api("/api/kv", { key: "voice", value: JSON.stringify(voice.filter(v => v.phrase && v.cmd)) });
-  const on = $("#voiceOn").checked;
-  if (on && window.Android && !Android.hasMic()) { Android.askMic(); return say("#voiceMsg", "Allow the microphone, then tap Save again.", 1); }
-  const r = await api("/api/voiceset", { on: on ? "1" : "0", lang: $("#voiceLang").value });
-  say("#voiceMsg", r.msg === "ok" ? (on ? "Listening." : "Stopped.") : r.msg, r.msg !== "ok");
-};
-$("#cuePhone").onclick = async () => { const r = await api("/api/cue", { name: "meet" }); say("#cueMsg", r.msg, r.msg !== "Playing."); };
-$("#cuePc").onclick = async () => { const r = await api("/api/command", { cmd: "cue:meet" }); say("#cueMsg", r.msg === "Sent." ? "Playing on the PC." : r.msg, r.msg !== "Sent."); };
+$("#voiceSave").onclick = async () => { await api("/api/kv", { key: "voice", value: JSON.stringify(voice.filter(v => v.phrase && v.cmd)) }); applyVoice($("#voiceOn").checked); };
 
-function handleShare() {
-  const q = new URLSearchParams(location.search).get("share");
-  if (!q) return;
-  history.replaceState(null, "", location.pathname);
-  view("links");
-  const m = q.match(/https?:\/\/\S+/);
-  if (m) openOnPc(m[0]);
-  else api("/api/clip", { text: q }).then(r => say("#lkMsg", r.msg === "Sent." ? "Sent to your PC clipboard." : r.msg, r.msg !== "Sent."));
+[[25, 5], [50, 10], [90, 15]].forEach(([m, br]) => { const b = el("button", "", m + " min focus, " + br + " break"); b.onclick = () => focus(m, br); $("#fpre").append(b); });
+$("#fGo").onclick = () => { const m = Number($("#fMin").value); if (!(m > 0)) return; const w = $("#fText").value.trim(); api("/api/timer", { minutes: m, text: w ? w + ": time is up." : "Time is up." }); toast("Started. I will tell you at " + atTime(m)); };
+const RF = [["text", "What should it say?"], ["every", "Every (min)", "number"], ["at", "Daily at", "time"]], DF = [["name", "Deadline"], ["date", "", "date"]], CF = [["label", "Button name"], ["cmd", "Command"]];
+function renderDls() {
+  const box = $("#dlCards"); box.replaceChildren();
+  dls.filter(d => d.name && d.date).sort((a, b) => a.date.localeCompare(b.date)).forEach(d => {
+    const days = Math.ceil((new Date(d.date + "T23:59:59") - Date.now()) / 864e5), c = el("div", "dl");
+    c.append(el("b", "", days < 0 ? "Past" : String(days)), el("span", "", (days === 1 ? "day left: " : "days left: ") + d.name)); box.append(c);
+  });
 }
-function start() { load(true); handleShare(); }
-$("#unlock").onclick = async () => {
-  sessionStorage.setItem("pin", $("#pinIn").value);
-  const r = await api("/api/unlock");
-  if (r.ok) { $("#lock").hidden = true; $("#pinIn").value = ""; $("#lockMsg").textContent = ""; start(); }
-  else say("#lockMsg", "Wrong PIN.", 1);
+[["Portfolio hour", { text: "Portfolio hour. Write one paragraph in English.", every: 0, at: "20:00" }], ["Series writing", { text: "Time to work on the series.", every: 0, at: "18:00" }],
+ ["Stretch and water", { text: "Stretch and drink some water.", every: 60, at: "" }], ["Rest your eyes", { text: "Look away from the screen for a minute.", every: 20, at: "" }]]
+  .forEach(([l, o]) => { const b = el("button", "chip", l); b.onclick = () => { rems.push({ ...o }); editor($("#remRows"), rems, RF, true); }; $("#rpre").append(b); });
+$("#addRem").onclick = () => { rems.push({ text: "", every: 0, at: "" }); editor($("#remRows"), rems, RF, true); };
+$("#addDl").onclick = () => { dls.push({ name: "", date: "" }); editor($("#dlRows"), dls, DF, false, renderDls); };
+$("#planSave").onclick = async () => {
+  const list = rems.filter(r => r.text && (r.every > 0 || r.at)).map(r => ({ text: r.text, every: r.every > 0 ? r.every : 0, at: r.every > 0 ? "" : r.at, speak: true }));
+  await api("/api/reminder", { list: JSON.stringify(list) }); await api("/api/deadlines", { list: JSON.stringify(dls.filter(d => d.name && d.date)) }); renderDls(); toast("Plan saved");
 };
-(async () => {
-  const r = await api("/api/unlock");
-  if (r.ok) start(); else $("#lock").hidden = false;
-})();
-setInterval(() => {
-  if (!$("#inbox").hidden || !$("#stage").hidden || !$("#pc").hidden || !$("#links").hidden) load(false);
-  if (!$("#remote").hidden) loadMedia().catch(() => {});
-}, 3000);
+
+const prefsPayload = () => ({ q_on: $("#qOn").checked ? "1" : "0", q_from: $("#qFrom").value || "23:00", q_to: $("#qTo").value || "07:00", tts_lang: $("#vLang").value, tts_rate: $("#vRate").value || "1" });
+$("#addRow").onclick = () => { cmds.push({ label: "", cmd: "" }); editor($("#rows"), cmds, CF); };
+$("#setSave").onclick = async () => {
+  cmds = cmds.filter(c => c.cmd.trim()); await api("/api/settings", { pc: $("#pc").value, commands: JSON.stringify(cmds) });
+  const np = $("#pinNew").value.trim(); await api("/api/prefs", np ? { ...prefsPayload(), newpin: np } : prefsPayload());
+  if (np) { sessionStorage.setItem("pin", np); $("#pinNew").value = ""; $("#pinOff").hidden = false; }
+  editor($("#rows"), cmds, CF); renderRemote(); toast("Settings saved");
+};
+$("#pinOff").onclick = async () => { await api("/api/prefs", { ...prefsPayload(), newpin: "" }); sessionStorage.removeItem("pin"); $("#pinOff").hidden = true; toast("PIN removed"); };
+$("#cuePhone").onclick = async () => { const r = await api("/api/cue", { name: "meet" }); toast(r.msg, r.msg !== "Playing."); };
+$("#cuePc").onclick = () => run("cue:meet");
+
+async function pullLog() { const r = await api("/api/pclog"), box = $("#con"), end = box.scrollHeight - box.scrollTop - box.clientHeight < 40; box.textContent = r.text || "(nothing yet)"; if (end) box.scrollTop = box.scrollHeight; }
+$("#conBtn").onclick = () => { if (conT) { clearInterval(conT); conT = null; $("#con").hidden = true; $("#conBtn").textContent = "Show console"; } else { $("#con").hidden = false; $("#conBtn").textContent = "Hide console"; pullLog(); conT = setInterval(pullLog, 2000); } };
+$("#restartBtn").onclick = async () => { const r = await api("/api/pcrestart", {}); toast(r.msg === "Sent." ? "Restarting. Give it 5 seconds." : r.msg, r.msg !== "Sent."); };
+
+/* ============ 10. start ============ */
+function handleLaunch() {
+  const q = new URLSearchParams(location.search).get("share"); if (!q) return; history.replaceState(null, "", location.pathname);
+  go("share"); const m = q.match(/https?:\/\/\S+/);
+  if (m) openOnPc(m[0]); else api("/api/clip", { text: q }).then(r => toast(r.msg === "Sent." ? "Sent to the PC clipboard" : r.msg, r.msg !== "Sent."));
+}
+function start() { go("home"); load(true); handleLaunch(); }
+$("#unlock").onclick = async () => { sessionStorage.setItem("pin", $("#pinIn").value); const r = await api("/api/unlock"); if (r.ok) { $("#lock").hidden = true; $("#pinIn").value = ""; $("#lockMsg").textContent = ""; start(); } else $("#lockMsg").textContent = "Wrong PIN."; };
+(async () => { go("home"); const r = await api("/api/unlock"); if (r.ok) start(); else $("#lock").hidden = false; })();
+setInterval(() => { load(false); if (!$("#home").hidden) loadMedia().catch(() => {}); }, 3000);
 </script>
 </body>
 </html>

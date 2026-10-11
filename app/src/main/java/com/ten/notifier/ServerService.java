@@ -15,13 +15,16 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
 import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
-import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -41,13 +44,13 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.HttpURLConnection;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -61,9 +64,6 @@ import fi.iki.elonen.NanoHTTPD;
 
 public class ServerService extends Service {
     static final String FG = "fg";
-    static final String DEFAULT_WOL_MAC = "90:48:9A:E3:64:6E";
-    static final int DEFAULT_WOL_DELAY_MIN = 5;
-    static final int DEFAULT_BATT_THRESHOLD = 15;
 
     NanoHTTPD server;
     TextToSpeech tts;
@@ -92,7 +92,6 @@ public class ServerService extends Service {
         makeChannels();
         IntentFilter bf = new IntentFilter(Intent.ACTION_BATTERY_LOW);
         bf.addAction(Intent.ACTION_BATTERY_OKAY);
-        bf.addAction(Intent.ACTION_BATTERY_CHANGED);
         if (Build.VERSION.SDK_INT >= 33) {
             registerReceiver(battery, bf, Context.RECEIVER_NOT_EXPORTED);
         } else {
@@ -125,7 +124,7 @@ public class ServerService extends Service {
         Notification n = new Notification.Builder(this, FG)
                 .setContentTitle("Notifier running")
                 .setContentText("Listening on port 5000")
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setSmallIcon(R.drawable.ic_stat)
                 .build();
 
         if (Build.VERSION.SDK_INT >= 34) {
@@ -144,6 +143,7 @@ public class ServerService extends Service {
         }
         if (udpThread == null) startDiscovery();
         if (presenceThread == null) startPresence();
+        handler.post(() -> setMotion(prefs.getBoolean("motion_on", false)));
         scheduleReminder();
         return START_STICKY;
     }
@@ -264,16 +264,13 @@ public class ServerService extends Service {
                         return json(r.toString());
                     }
                     case "/api/prefs": {
-                        SharedPreferences.Editor ed = prefs.edit()
+                        prefs.edit()
                                 .putBoolean("q_on", "1".equals(p.get("q_on")))
                                 .putString("q_from", arg(p, "q_from", "23:00"))
                                 .putString("q_to", arg(p, "q_to", "07:00"))
                                 .putString("tts_lang", arg(p, "tts_lang", ""))
-                                .putFloat("tts_rate", Float.parseFloat(arg(p, "tts_rate", "1")));
-                        if (p.containsKey("wol_mac")) ed.putString("wol_mac", arg(p, "wol_mac", DEFAULT_WOL_MAC));
-                        if (p.containsKey("wol_delay_min")) ed.putInt("wol_delay_min", parseInt(arg(p, "wol_delay_min", String.valueOf(DEFAULT_WOL_DELAY_MIN)), DEFAULT_WOL_DELAY_MIN));
-                        if (p.containsKey("batt_threshold")) ed.putInt("batt_threshold", parseInt(arg(p, "batt_threshold", String.valueOf(DEFAULT_BATT_THRESHOLD)), DEFAULT_BATT_THRESHOLD));
-                        ed.apply();
+                                .putFloat("tts_rate", Float.parseFloat(arg(p, "tts_rate", "1")))
+                                .apply();
                         if (p.containsKey("newpin")) prefs.edit().putString("pin", p.get("newpin")).apply();
                         return json("{\"ok\":true}");
                     }
@@ -419,12 +416,6 @@ public class ServerService extends Service {
                         playCue(nm);
                         return json(r.toString());
                     }
-                    case "/api/wol": {
-                        JSONObject r = new JSONObject();
-                        String mac = arg(p, "mac", prefs.getString("wol_mac", DEFAULT_WOL_MAC));
-                        r.put("msg", sendWol(mac));
-                        return json(r.toString());
-                    }
                     case "/voice":
                         addHistory("Voice", arg(p, "text", ""), "info", null);
                         return json("{\"ok\":true}");
@@ -446,6 +437,20 @@ public class ServerService extends Service {
                         }
                         return json(r.toString());
                     }
+                    case "/api/motion": {
+                        boolean on = "1".equals(p.get("on"));
+                        prefs.edit().putBoolean("motion_on", on).apply();
+                        handler.post(() -> setMotion(on));
+                        return json("{\"ok\":true}");
+                    }
+                    case "/api/wake": {
+                        JSONObject r = new JSONObject();
+                        r.put("msg", wakePc());
+                        return json(r.toString());
+                    }
+                    case "/pcinfo":
+                        prefs.edit().putString("pc_mac", arg(p, "mac", "")).apply();
+                        return json("{\"ok\":true}");
                     case "/api/clear":
                         prefs.edit().putString("history", "[]").apply();
                         return json("{\"ok\":true}");
@@ -458,53 +463,6 @@ public class ServerService extends Service {
         }
     }
 
-    static int parseInt(String s, int d) {
-        try {
-            return Integer.parseInt(s.trim());
-        } catch (Exception e) {
-            return d;
-        }
-    }
-
-    // ---- Wake-on-LAN ---------------------------------------------------------
-    String sendWol(String mac) {
-        try {
-            String clean = mac.replaceAll("[^0-9A-Fa-f]", "");
-            if (clean.length() != 12) return "Bad MAC address.";
-            byte[] pkt = new byte[6 + 16 * 6];
-            for (int i = 0; i < 6; i++) pkt[i] = (byte) 0xFF;
-            byte[] m = new byte[6];
-            for (int i = 0; i < 6; i++) m[i] = (byte) Integer.parseInt(clean.substring(i * 2, i * 2 + 2), 16);
-            for (int r = 0; r < 16; r++) System.arraycopy(m, 0, pkt, 6 + r * 6, 6);
-
-            java.net.DatagramSocket ds = new java.net.DatagramSocket();
-            ds.setBroadcast(true);
-            String[] targets = {"255.255.255.255", subnetBroadcast()};
-            for (String t : targets) {
-                try {
-                    ds.send(new DatagramPacket(pkt, pkt.length, InetAddress.getByName(t), 9));
-                    ds.send(new DatagramPacket(pkt, pkt.length, InetAddress.getByName(t), 7));
-                } catch (Exception ignored) {
-                }
-            }
-            ds.close();
-            return "Wake-on-LAN sent.";
-        } catch (Exception e) {
-            return "WoL failed: " + e.getMessage();
-        }
-    }
-
-    String subnetBroadcast() {
-        try {
-            int ip = ((WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE))
-                    .getConnectionInfo().getIpAddress();
-            return (ip & 255) + "." + ((ip >> 8) & 255) + "." + ((ip >> 16) & 255) + ".255";
-        } catch (Exception e) {
-            return "255.255.255.255";
-        }
-    }
-
-    // ---- Notifications -------------------------------------------------------
     void show(String title, String text, boolean speak, String type) {
         show(title, text, speak, type, null);
     }
@@ -518,22 +476,13 @@ public class ServerService extends Service {
         boolean quiet = !type.equals("error") && quietNow();
         String chan = quiet ? "quiet" : type;
 
-        // A4: silently skip when the user denied notifications on Android 13+.
-        if (Build.VERSION.SDK_INT >= 33
-                && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
-            addHistory(title, text, type, img);
-            if (speak && ttsReady && !quiet) say(text, lang);
-            if (type.equals("error")) flash();
-            return;
-        }
-
         PendingIntent pi = PendingIntent.getActivity(this, 0,
                 new Intent(this, MainActivity.class), PendingIntent.FLAG_IMMUTABLE);
         Notification n = new Notification.Builder(this, chan)
                 .setContentTitle(title)
                 .setContentText(text)
                 .setStyle(new Notification.BigTextStyle().bigText(text))
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setSmallIcon(R.drawable.ic_stat)
                 .setContentIntent(pi)
                 .setAutoCancel(true)
                 .build();
@@ -637,6 +586,11 @@ public class ServerService extends Service {
     Thread udpThread;
     DatagramSocket udpOut;
     Thread presenceThread;
+    SensorManager sm;
+    SensorEventListener motionListener;
+    long faceDownSince = 0;
+    long lastShakeAt = 0;
+    boolean isFaceDown = false;
     volatile boolean pcOnline = false;
     HashMap<String, Long> lastCue = new HashMap<>();
     volatile JSONObject stats = new JSONObject();
@@ -644,44 +598,10 @@ public class ServerService extends Service {
     BroadcastReceiver battery = new BroadcastReceiver() {
         @Override
         public void onReceive(Context c, Intent i) {
-            final String action = i.getAction();
-            if (Intent.ACTION_BATTERY_CHANGED.equals(action)) {
-                applyBatteryPolicy(i);
-                return;
-            }
-            final String name = Intent.ACTION_BATTERY_LOW.equals(action) ? "battery_low" : "battery_ok";
+            final String name = Intent.ACTION_BATTERY_LOW.equals(i.getAction()) ? "battery_low" : "battery_ok";
             new Thread(() -> post("/event", "name=" + name)).start();
         }
     };
-
-    // F4c: release wake lock below the user-configured threshold (unless charging).
-    int lastBattLevel = -1;
-    boolean lastBattCharging = false;
-
-    void applyBatteryPolicy(Intent i) {
-        int level = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-        int scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
-        if (level < 0 || scale <= 0) return;
-        int pct = level * 100 / scale;
-        int status = i.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
-        boolean charging = status == BatteryManager.BATTERY_STATUS_CHARGING
-                || status == BatteryManager.BATTERY_STATUS_FULL;
-        if (pct == lastBattLevel && charging == lastBattCharging) return;
-        lastBattLevel = pct;
-        lastBattCharging = charging;
-
-        int threshold = prefs.getInt("batt_threshold", DEFAULT_BATT_THRESHOLD);
-        boolean shouldHold = charging || pct > threshold;
-        try {
-            if (shouldHold && !wl.isHeld()) {
-                wl.acquire();
-            } else if (!shouldHold && wl.isHeld()) {
-                wl.release();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     void startDiscovery() {
         udpThread = new Thread(() -> {
@@ -813,6 +733,8 @@ public class ServerService extends Service {
             o.put(k, new JSONArray(prefs.getString("kv_" + k, "[]")));
         }
         o.put("pcOnline", pcOnline);
+        o.put("motionOn", prefs.getBoolean("motion_on", false));
+        o.put("hasMac", !prefs.getString("pc_mac", "").isEmpty());
         o.put("voiceOn", prefs.getBoolean("voice_on", false));
         o.put("voiceLang", prefs.getString("voice_lang", "en-US"));
         o.put("stats", stats);
@@ -824,57 +746,97 @@ public class ServerService extends Service {
         pf.put("tts_lang", prefs.getString("tts_lang", ""));
         pf.put("tts_rate", (double) prefs.getFloat("tts_rate", 1.0f));
         pf.put("pin", !prefs.getString("pin", "").isEmpty());
-        pf.put("wol_mac", prefs.getString("wol_mac", DEFAULT_WOL_MAC));
-        pf.put("wol_delay_min", prefs.getInt("wol_delay_min", DEFAULT_WOL_DELAY_MIN));
-        pf.put("batt_threshold", prefs.getInt("batt_threshold", DEFAULT_BATT_THRESHOLD));
         o.put("prefs", pf);
         o.put("pc", prefs.getString("pc", ""));
         o.put("commands", new JSONArray(prefs.getString("commands", "[]")));
         return o;
     }
 
+    void sendEvent(final String name) {
+        new Thread(() -> post("/event", "name=" + name)).start();
+    }
+
+    /** Watches the accelerometer for shake, face-down and picked-up, even with the screen off. */
+    void setMotion(boolean on) {
+        if (sm == null) sm = (SensorManager) getSystemService(SENSOR_SERVICE);
+        if (motionListener != null) {
+            sm.unregisterListener(motionListener);
+            motionListener = null;
+        }
+        if (!on) return;
+        Sensor acc = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        if (acc == null) return;
+        motionListener = new SensorEventListener() {
+            @Override
+            public void onSensorChanged(SensorEvent e) {
+                float x = e.values[0], y = e.values[1], z = e.values[2];
+                long now = System.currentTimeMillis();
+                double g = Math.sqrt(x * x + y * y + z * z) / 9.81;
+                if (g > 2.6 && now - lastShakeAt > 1200) {
+                    lastShakeAt = now;
+                    sendEvent("shake");
+                }
+                if (z < -8.5) {
+                    if (faceDownSince == 0) faceDownSince = now;
+                    if (!isFaceDown && now - faceDownSince > 1200) {
+                        isFaceDown = true;
+                        sendEvent("face_down");
+                    }
+                } else {
+                    faceDownSince = 0;
+                    if (isFaceDown && z > -5) {
+                        isFaceDown = false;
+                        sendEvent("picked_up");
+                    }
+                }
+            }
+
+            @Override
+            public void onAccuracyChanged(Sensor s, int a) {
+            }
+        };
+        sm.registerListener(motionListener, acc, SensorManager.SENSOR_DELAY_UI);
+    }
+
+    String wakePc() {
+        String mac = prefs.getString("pc_mac", "");
+        if (mac.isEmpty()) return "I don't know the PC's address yet. Open the app once while the PC is on.";
+        try {
+            String[] hex = mac.split("[:-]");
+            byte[] m = new byte[6];
+            for (int i = 0; i < 6; i++) m[i] = (byte) Integer.parseInt(hex[i], 16);
+            byte[] pkt = new byte[102];
+            for (int i = 0; i < 6; i++) pkt[i] = (byte) 0xFF;
+            for (int i = 6; i < 102; i += 6) System.arraycopy(m, 0, pkt, i, 6);
+            try (DatagramSocket s = new DatagramSocket()) {
+                s.setBroadcast(true);
+                for (int port : new int[]{9, 7}) {
+                    s.send(new DatagramPacket(pkt, pkt.length, InetAddress.getByName("255.255.255.255"), port));
+                }
+            }
+            return "Wake signal sent.";
+        } catch (Exception e) {
+            return "Couldn't send it.";
+        }
+    }
+
     void startPresence() {
         presenceThread = new Thread(() -> {
             int misses = 0;
-            long goneSince = 0L;
-            boolean wolSent = false;
-            long lastLoggedState = 0L;
-            boolean lastOnline = false;
-
             while (true) {
                 try {
                     String found = discoverPc();
-                    long now = System.currentTimeMillis();
                     if (!found.isEmpty()) {
                         misses = 0;
-                        goneSince = 0L;
-                        wolSent = false;
                         if (!found.equals(prefs.getString("pc", ""))) prefs.edit().putString("pc", found).apply();
                         if (!pcOnline) {
                             pcOnline = true;
-                            if (now - lastLoggedState > 2000) lastLoggedState = now;
                             playCue("meet");
                             post("/cue?name=meet", "go=1");
                         }
-                        lastOnline = true;
                     } else if (++misses >= 2 && pcOnline) {
                         pcOnline = false;
-                        goneSince = now;
                         playCue("leave");
-                        lastOnline = false;
-                    } else if (!pcOnline && goneSince == 0L) {
-                        goneSince = now;
-                    }
-
-                    // F3c: auto-WoL when the PC has been missing long enough
-                    if (!pcOnline && goneSince > 0L && !wolSent) {
-                        int delayMin = prefs.getInt("wol_delay_min", DEFAULT_WOL_DELAY_MIN);
-                        if (now - goneSince >= delayMin * 60000L) {
-                            wolSent = true;
-                            String mac = prefs.getString("wol_mac", DEFAULT_WOL_MAC);
-                            String result = sendWol(mac);
-                            addHistory("Wake-on-LAN", "PC missing for " + delayMin + " min. " + result, "info", null);
-                        }
                     }
                     Thread.sleep(6000);
                 } catch (Exception e) {
@@ -889,9 +851,7 @@ public class ServerService extends Service {
         presenceThread.start();
     }
 
-    // A1 + A2: guard empty names, dedupe by name within 15s.
     void playCue(final String name) {
-        if (name == null || name.isEmpty()) return;
         long now = System.currentTimeMillis();
         Long last = lastCue.get(name);
         if (last != null && now - last < 15000) return;
@@ -1021,7 +981,7 @@ public class ServerService extends Service {
             if (rs != null) {
                 byte[] drain = new byte[1024];
                 while (rs.read(drain) >= 0) {
-                    // drain
+                    // read the reply so the connection can be reused
                 }
                 rs.close();
             }
@@ -1043,6 +1003,7 @@ public class ServerService extends Service {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        if (sm != null && motionListener != null) sm.unregisterListener(motionListener);
         if (server != null) server.stop();
         if (tts != null) tts.shutdown();
         if (wl != null && wl.isHeld()) wl.release();
