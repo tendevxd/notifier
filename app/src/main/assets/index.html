@@ -119,6 +119,8 @@
   nav .ic { width:48px; height:30px; border-radius:15px; display:grid; place-items:center; }
   nav svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
   nav button[aria-current="true"] { color:#fff; } nav button[aria-current="true"] .ic { background:var(--grad); box-shadow:0 4px 16px var(--glow); }
+  .ym { display:flex; gap:14px; align-items:center; padding:12px 16px; } .ym svg { width:64px; height:86px; flex:0 0 auto; overflow:visible; transition:transform .2s; }
+  .ym.pet svg { transform:scale(1.1) rotate(-5deg); } .ym b { display:block; font-size:1.05rem; }
 </style>
 </head>
 <body>
@@ -140,6 +142,17 @@
   <!-- HOME -->
   <section class="view" id="home">
     <div id="asks"></div>
+    <div class="card ym" id="ym">
+      <svg viewBox="0 0 90 124" aria-hidden="true">
+        <rect x="3" y="52" width="9" height="24" rx="4.5" fill="#d9d9e2"/><rect x="78" y="52" width="9" height="24" rx="4.5" fill="#d9d9e2"/>
+        <rect x="12" y="4" width="66" height="96" rx="15" fill="#f4f4f8" stroke="#b9b9c6" stroke-width="1.5"/>
+        <rect x="19" y="16" width="52" height="62" rx="9" fill="#08120d"/>
+        <g id="ymFace" stroke="#bfffd2" fill="none" stroke-width="3.4" stroke-linecap="round"></g>
+        <rect id="ymBat" x="32" y="86" width="26" height="6" rx="2" fill="#2ee59d"/>
+        <circle cx="45" cy="111" r="10" fill="#3a3a44"/>
+      </svg>
+      <div><b id="ymSay">Yes!</b><span class="muted" id="ymInfo"></span></div>
+    </div>
     <div class="cmdbar"><input id="cmdIn" type="text" placeholder="screenshot, volume 30, open youtube cats" autocomplete="off" autocapitalize="off" enterkeyhint="go"><button id="cmdGo">Go</button></div>
     <div class="qgrid" id="quick"></div>
     <div class="card">
@@ -390,7 +403,8 @@
       <p><code>power:lock</code> <code>power:sleep</code> <code>power:screenoff</code> <code>power:restart</code> <code>power:shutdown:30</code> <code>power:cancel</code></p>
       <p><code>input:media playpause</code> <code>input:media next</code> <code>input:vol 40</code> <code>input:mute</code> <code>input:type hello</code> <code>input:key enter</code> <code>input:combo ctrl+c</code></p>
       <p><code>open:C:\path\file.toe</code> <code>run:notepad</code> <code>url:https://...</code> <code>kill:Name.exe</code></p>
-      <p><code>play:C:\sound.wav</code> <code>stopsound</code> <code>cue:meet</code></p>
+      <p><code>play:C:\sound.wav</code> <code>stopsound</code> <code>cue:meet</code> <code>yesman:pet</code> <code>yesman:say:Hello</code></p>
+      <p class="muted">Automations can also use <code>app:chrome</code> (any program), <code>idle_10min</code>, <code>back</code>, <code>charging</code>, <code>unplugged</code>.</p>
       <p class="muted">Add your own in my_actions.py on the PC with @action("name").</p></div>
     <div class="card"><h3>Scene steps</h3><p>One action per line. <code>wait:2</code> pauses two seconds. Lines starting with # are ignored.</p></div>
     <div class="card"><h3>Quick Settings tiles</h3><p>Swipe down twice, tap the pencil, and drag in "PC screenshot", "PC play / pause" and "Lock PC".</p></div>
@@ -522,7 +536,7 @@ async function applyVoice(on) {
 async function load(first) {
   try { S = await api("/api/state"); $("#live").classList.add("on"); } catch (e) { $("#live").classList.remove("on"); return; }
   $("#pcLive").classList.toggle("on", !!S.pcOnline);
-  renderAlerts(); renderAsks(); renderSparks(); renderShots(); renderLinks(); renderQuick();
+  renderAlerts(); renderAsks(); renderSparks(); renderShots(); renderLinks(); renderQuick(); renderYesMan();
   if (first) {
     cmds = S.commands; rems = S.reminders; dls = S.deadlines; links = S.links; modes = S.modes; pads = S.pads; snds = S.sounds; voice = S.voice;
     $("#pc").value = S.pc; $("#voiceOn").checked = S.voiceOn; $("#voiceLang").value = S.voiceLang; $("#motionOn").checked = S.motionOn;
@@ -556,6 +570,34 @@ function renderQuick() {
   const box = $("#quick"); if (!box.children.length) QUICK.forEach(([i, l, fn]) => { const b = el("button", "q"); b.innerHTML = ico(i) + l; b.onclick = fn; box.append(b); });
   box.children[5].classList.toggle("on", !!S.voiceOn);
 }
+/* Yes Man on the phone: the same smiley, reacting to what the phone knows */
+const YM_EYES = {
+  normal: '<circle cx="35" cy="42" r="3.6" fill="#bfffd2"/><circle cx="55" cy="42" r="3.6" fill="#bfffd2"/>',
+  happy: '<path d="M30 45q5-8 10 0M50 45q5-8 10 0"/>',
+  wide: '<circle cx="35" cy="42" r="6"/><circle cx="55" cy="42" r="6"/><circle cx="35" cy="42" r="1.8" fill="#bfffd2"/><circle cx="55" cy="42" r="1.8" fill="#bfffd2"/>',
+  sleepy: '<path d="M30 43h10M50 43h10"/>'
+};
+let ymHold = false, ymMood = "normal", lastPet = null;
+function ymSet(mood, say) { ymMood = mood; $("#ymFace").innerHTML = YM_EYES[mood] + '<path d="M30 56q15 14 30 0"/>'; if (say) $("#ymSay").textContent = say; }
+function renderYesMan() {
+  const err = S.history.find(h => h.type === "error" && Date.now() - h.t < 60000);
+  let mood = "normal", say = "Yes! I'm on your desktop.";
+  if (!S.pcOnline) { mood = "sleepy"; say = "I'm waiting at the PC."; }
+  else if (err) { mood = "wide"; say = "Great news! " + err.text.slice(0, 60); }
+  else if (S.batCharging) { mood = "happy"; say = "Charging! Yes!"; }
+  if (!ymHold) ymSet(mood, say);
+  $("#ymInfo").textContent = S.batLevel >= 0 ? "Phone battery " + S.batLevel + "%" + (S.batCharging ? ", charging" : "") : "";
+  const bat = $("#ymBat"); bat.setAttribute("width", Math.max(2, 26 * Math.max(0, S.batLevel) / 100)); bat.setAttribute("fill", S.batLevel > 40 ? "#2ee59d" : S.batLevel > 15 ? "#ffb347" : "#ff5d6c");
+  if (lastPet === null) lastPet = S.petAt || 0;
+  else if (S.petAt && S.petAt !== lastPet) { lastPet = S.petAt; ymPet(false); }
+}
+function ymPet(send) {
+  ymHold = true; ymSet("happy", ["Yes!", "Of course!", "Right away!", "Yes, boss!"][Math.floor(Math.random() * 4)]); $("#ym").classList.add("pet");
+  if (send) { api("/api/command", { cmd: "yesman:pet" }); if (navigator.vibrate) navigator.vibrate(30); }
+  setTimeout(() => { ymHold = false; $("#ym").classList.remove("pet"); if (S) renderYesMan(); }, 1600);
+}
+$("#ym").onclick = () => ymPet(true);
+setInterval(() => { if (ymMood === "normal" && !ymHold) { ymSet("sleepy"); setTimeout(() => { if (ymMood === "sleepy" && !ymHold && S && S.pcOnline) ymSet("normal"); }, 130); } }, 4800);
 $("#disc").innerHTML = rawIco("play"); $("#npPrev").innerHTML = rawIco("prev"); $("#npNext").innerHTML = rawIco("next"); $("#npPlay").innerHTML = rawIco("play");
 const mediaKey = k => { inp("media " + k); setTimeout(() => loadMedia().catch(() => {}), 700); };
 $("#npPrev").onclick = () => mediaKey("prev"); $("#npNext").onclick = () => mediaKey("next"); $("#npPlay").onclick = () => mediaKey("playpause");
@@ -788,9 +830,10 @@ const EVENTS = [["phone_found", "Phone and PC meet"], ["phone_lost", "Phone leav
   ["battery_low", "Phone battery low"], ["new_file", "New file in a watched folder"], ["program_closed", "A watched program closes"], ["pc_start", "PC script starts"]];
 function ruleEditor() {
   const box = $("#ruleRows"); box.replaceChildren();
+  if (!$("#evlist")) { const dl = el("datalist"); dl.id = "evlist"; EVENTS.forEach(([v, l]) => { const o = el("option", "", l); o.value = v; dl.append(o); }); document.body.append(dl); }
   rules.forEach((r, i) => {
-    const row = el("div", "row wrap f"), s = el("select"), d = el("input"), x = el("button", "chip x", "Remove");
-    EVENTS.forEach(([v, l]) => { const o = el("option", "", l); o.value = v; s.append(o); }); s.value = r.when; s.onchange = () => r.when = s.value;
+    const row = el("div", "row wrap f"), s = el("input"), d = el("input"), x = el("button", "chip x", "Remove");
+    s.type = "text"; s.setAttribute("list", "evlist"); s.placeholder = "When (pick one, or type app:chrome)"; s.value = r.when || ""; s.oninput = () => r.when = s.value.trim();
     d.type = "text"; d.placeholder = "then run (like power:lock or scene:Work)"; d.value = r.do || ""; d.oninput = () => r.do = d.value;
     x.onclick = () => { rules.splice(i, 1); ruleEditor(); }; row.append(s, d, x); box.append(row);
   });

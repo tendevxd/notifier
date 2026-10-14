@@ -25,11 +25,14 @@ import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
@@ -451,6 +454,16 @@ public class ServerService extends Service {
                     case "/pcinfo":
                         prefs.edit().putString("pc_mac", arg(p, "mac", "")).apply();
                         return json("{\"ok\":true}");
+                    case "/pet": {
+                        petAt = System.currentTimeMillis();
+                        try {
+                            ((Vibrator) getSystemService(VIBRATOR_SERVICE))
+                                    .vibrate(VibrationEffect.createOneShot(80, VibrationEffect.DEFAULT_AMPLITUDE));
+                        } catch (Exception e) {
+                            // no vibrator
+                        }
+                        return json("{\"ok\":true}");
+                    }
                     case "/api/clear":
                         prefs.edit().putString("history", "[]").apply();
                         return json("{\"ok\":true}");
@@ -489,6 +502,10 @@ public class ServerService extends Service {
         getSystemService(NotificationManager.class).notify(nid++, n);
 
         addHistory(title, text, type, img);
+        if (pcOnline && img == null) {
+            final String fa = title, fb = text, fc = type;
+            new Thread(() -> post("/alert", "title=" + urlenc(fa) + "&text=" + urlenc(fb) + "&type=" + fc)).start();
+        }
         if (speak && ttsReady && !quiet) say(text, lang);
         if (type.equals("error")) flash();
     }
@@ -587,6 +604,11 @@ public class ServerService extends Service {
     DatagramSocket udpOut;
     Thread presenceThread;
     SensorManager sm;
+    volatile int batLevel = -1;
+    volatile boolean batCharging = false;
+    volatile long petAt = 0;
+    int lastSentLevel = -2;
+    boolean lastSentCharging = false;
     SensorEventListener motionListener;
     long faceDownSince = 0;
     long lastShakeAt = 0;
@@ -733,6 +755,9 @@ public class ServerService extends Service {
             o.put(k, new JSONArray(prefs.getString("kv_" + k, "[]")));
         }
         o.put("pcOnline", pcOnline);
+        o.put("batLevel", batLevel);
+        o.put("batCharging", batCharging);
+        o.put("petAt", petAt);
         o.put("motionOn", prefs.getBoolean("motion_on", false));
         o.put("hasMac", !prefs.getString("pc_mac", "").isEmpty());
         o.put("voiceOn", prefs.getBoolean("voice_on", false));
@@ -750,6 +775,14 @@ public class ServerService extends Service {
         o.put("pc", prefs.getString("pc", ""));
         o.put("commands", new JSONArray(prefs.getString("commands", "[]")));
         return o;
+    }
+
+    static String urlenc(String s) {
+        try {
+            return URLEncoder.encode(s, "UTF-8");
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     void sendEvent(final String name) {
@@ -831,12 +864,26 @@ public class ServerService extends Service {
                         if (!found.equals(prefs.getString("pc", ""))) prefs.edit().putString("pc", found).apply();
                         if (!pcOnline) {
                             pcOnline = true;
+                            lastSentLevel = -2;
                             playCue("meet");
                             post("/cue?name=meet", "go=1");
                         }
                     } else if (++misses >= 2 && pcOnline) {
                         pcOnline = false;
                         playCue("leave");
+                    }
+                    Intent bi = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+                    if (bi != null) {
+                        int lvl = bi.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+                        int scale = bi.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
+                        int st = bi.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+                        batLevel = scale > 0 ? lvl * 100 / scale : lvl;
+                        batCharging = st == BatteryManager.BATTERY_STATUS_CHARGING || st == BatteryManager.BATTERY_STATUS_FULL;
+                        if (pcOnline && (batLevel != lastSentLevel || batCharging != lastSentCharging)) {
+                            lastSentLevel = batLevel;
+                            lastSentCharging = batCharging;
+                            post("/phonestate", "level=" + batLevel + "&charging=" + (batCharging ? 1 : 0));
+                        }
                     }
                     Thread.sleep(6000);
                 } catch (Exception e) {
