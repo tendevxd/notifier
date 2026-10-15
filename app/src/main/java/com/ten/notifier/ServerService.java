@@ -230,7 +230,17 @@ public class ServerService extends Service {
                         for (String o : arg(p, "options", "Yes,No").split(",")) opts.put(o.trim());
                         a.put("options", opts);
                         asks.put(id, a);
+                        skipAlert = true;
                         show(a.getString("title"), a.getString("text"), true, "warn");
+                        skipAlert = false;
+                        if (pcOnline) {
+                            final String qid = id;
+                            final String qt = a.getString("title");
+                            final String qx = a.getString("text");
+                            final String qo = arg(p, "options", "Yes,No");
+                            new Thread(() -> post("/askshow", "id=" + qid + "&title=" + urlenc(qt)
+                                    + "&text=" + urlenc(qx) + "&options=" + urlenc(qo))).start();
+                        }
                         JSONObject r = new JSONObject();
                         r.put("id", id);
                         return json(r.toString());
@@ -464,6 +474,18 @@ public class ServerService extends Service {
                         }
                         return json("{\"ok\":true}");
                     }
+                    case "/reply":
+                        answers.put(arg(p, "id", ""), arg(p, "answer", ""));
+                        asks.remove(arg(p, "id", ""));
+                        return json("{\"ok\":true}");
+                    case "/file": {
+                        String b64 = files.get("postData");
+                        if (b64 == null) return json("{\"ok\":false}");
+                        String fname = arg(p, "name", "file");
+                        boolean saved = saveDownload(fname, Base64.decode(b64, Base64.DEFAULT));
+                        if (saved) show("File from your PC", fname + " is in Downloads/PromptDesk", false, "info");
+                        return json("{\"ok\":" + saved + "}");
+                    }
                     case "/api/clear":
                         prefs.edit().putString("history", "[]").apply();
                         return json("{\"ok\":true}");
@@ -502,7 +524,7 @@ public class ServerService extends Service {
         getSystemService(NotificationManager.class).notify(nid++, n);
 
         addHistory(title, text, type, img);
-        if (pcOnline && img == null) {
+        if (pcOnline && img == null && !skipAlert) {
             final String fa = title, fb = text, fc = type;
             new Thread(() -> post("/alert", "title=" + urlenc(fa) + "&text=" + urlenc(fb) + "&type=" + fc)).start();
         }
@@ -608,6 +630,7 @@ public class ServerService extends Service {
     volatile boolean batCharging = false;
     volatile long petAt = 0;
     int lastSentLevel = -2;
+    boolean skipAlert = false;
     boolean lastSentCharging = false;
     SensorEventListener motionListener;
     long faceDownSince = 0;
@@ -676,6 +699,26 @@ public class ServerService extends Service {
             prefs.edit().putString("linkhist", arr.toString()).apply();
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    boolean saveDownload(String name, byte[] data) {
+        if (Build.VERSION.SDK_INT < 29) return false;
+        try {
+            String safe = new File(name).getName();
+            String mime = java.net.URLConnection.guessContentTypeFromName(safe);
+            ContentValues v = new ContentValues();
+            v.put(MediaStore.Downloads.DISPLAY_NAME, safe);
+            v.put(MediaStore.Downloads.MIME_TYPE, mime == null ? "application/octet-stream" : mime);
+            v.put(MediaStore.Downloads.RELATIVE_PATH, "Download/PromptDesk");
+            Uri u = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+            OutputStream os = getContentResolver().openOutputStream(u);
+            os.write(data);
+            os.close();
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
         }
     }
 
